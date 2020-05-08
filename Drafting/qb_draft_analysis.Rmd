@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+options(warn = -1)
 library(tidyverse)
 library(rvest)
 setwd("/Users/PhilipIpe/Documents/Data Science/Projects/NFL Analytics/Drafting")
@@ -53,6 +54,18 @@ for (year in 1970:2016){
 
   master_df <- rbind(master_df, df)
 }
+```
+
+Next we will scrape the AP Offensive Rookie of the Year Winners from the same website.
+
+```{r scrape_ROTY}
+
+roty_url <- "https://www.pro-football-reference.com/awards/ap-offensive-rookie-of-the-year-award.htm"
+draft_html <- read_html(roty_url)
+
+roty_df <- draft_html %>%
+  html_node("table") %>%
+  html_table()
 ```
 # Part 2: Data Processing and Preparation
 
