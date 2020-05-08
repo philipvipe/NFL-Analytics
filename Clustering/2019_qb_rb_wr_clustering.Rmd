@@ -1,0 +1,92 @@
+---
+title: "K-Means Clustering of 2019 NFL Quarterbacks, Running Backs and Receivers"
+author: "Philip Ipe"
+date: "4/3/2020"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rvest)
+library(tidyverse)
+library(knitr)
+```
+
+## Data Preparation
+
+We have scraped and prepared data from Pro-Football Reference of the top 29-ranked quarterbacks in the 2019 NFL season. 
+
+Insert table of all of the variables
+```{r import}
+pass_df <- read.csv("pass_df.csv")
+pass_df$X <- NULL
+```
+
+## K-Means Clustering
+
+Now let's do some clustering of the passing data we have collected. We will use the k-means method, which in very simple terms will cluster the data by grouping teams with similar passing statistics together with one another. But first, we need to determine exactly how many groups we want to cluster them into---or k. We will use the elbow method to determine our k value, for more info on the elbow method visit the interwebs.
+
+Determining K using Elbow Method
+```{r elbow}
+set.seed(20)
+rng<-2:18
+tries <-100 #Run the K Means algorithm 100 times
+avg.totw.ss <-integer(length(rng)) #Set up an empty vector to hold all of points
+for(v in rng){ # For each value of the range variable
+ v.totw.ss <-integer(tries) #Set up an empty vector to hold the 100 tries
+ for(i in 1:tries){
+ k.temp <-kmeans(pass_df[,8:52],centers=v) #Run kmeans
+ v.totw.ss[i] <-k.temp$tot.withinss#Store the total withinss
+ }
+ avg.totw.ss[v-1] <-mean(v.totw.ss) #Average the 100 total withinss
+}
+plot(rng,avg.totw.ss,type="b", main="Total Within SS by Various K",
+ ylab="Average Total Within Sum of Squares",
+ xlab="Value of K")
+```
+
+We see that the point of the elbow is (kinda) at a value of 8, so let's roll with k=8 with our data. We'll attach the corresponding cluster number to each player now.
+```{r k_means}
+clusters <- kmeans(pass_df[,8:52], 8)
+pass_df$cluster <- as.factor(clusters$cluster)
+head(pass_df)
+```
+
+Use summaries of each cluster to say which each cluster is good at and what they are bad at.
+```{r print_clusters}
+#for (cluster_num in 1:8) {
+ # adv_passing_df %>%
+  #  filter(cluster ==cluster_num) %>%
+   # print(Player)
+#}
+
+pass_df %>%
+  group_by(cluster) %>%
+  summarize_all(mean) %>%
+  print()
+```
+From our analysis, we find that players like Jared Goff, Jameis Winston, and Lamar Jackson are in a class of their own.
+Now let's plot bad throw percentage vs. on target percentage for each quarterback.
+
+```{r plotting_bad_v_ontgt}
+pass_df %>%
+  group_by(cluster) %>%
+  ggplot(mapping=aes(x=`Bad.`, y=`OnTgt.`)) + 
+  geom_point(aes(color = cluster))
+```
+
+```{r plotting_more}
+pass_df %>%
+  group_by(cluster) %>%
+  ggplot(mapping=aes(x=`Rate`, y=`Win.`)) + 
+  geom_point(aes(color = cluster))
+```
+
+Add salaries of each player...do some clusters get paid more than others?
+
+Do some clusters win more than others?
+
+Add years starting to each QB, do some clusters just have less experience than others?
+

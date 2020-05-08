@@ -1,0 +1,157 @@
+---
+title: 'NFL Draft Analysis: The Quarterback'
+author: "Philip Ipe"
+date: "5/8/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(rvest)
+setwd("/Users/PhilipIpe/Documents/Data Science/Projects/NFL Analytics/Drafting")
+```
+
+# Part 1: Data Collection
+
+We will scrape historical draft data from Pro-Football Reference from years 1970 till 2016. We will filter out any selections after round 7, as since 1994, the NFL draft has only consisted of 7 rounds.
+
+```{r scraping}
+
+master_df <- data.frame()
+for (year in 1970:2016){
+  
+  draft_url <- paste("https://www.pro-football-reference.com/years/", year, "/draft.htm", sep="")
+  draft_html <- read_html(draft_url)
+
+  df <- draft_html %>%
+    html_node("table") %>%
+    html_table()
+
+  names(df) <- as.character(unlist(df[1,]))
+  df <- df[-1,]
+  
+  # get rid of the columns we dont care about
+  df <- df[,1:13]
+  
+  df$Rnd <- as.integer(df$Rnd)
+  df$Age <- as.integer(df$Age)
+  df$CarAV <- as.integer(df$CarAV)
+  df$DrAV <- as.integer(df$DrAV)
+  df$G <- as.integer(df$G)
+  
+  # filter out certain rounds
+  df <- df %>%
+    filter(Rnd < 8)
+  
+  # get rid of blank rows
+  df <-df[!(df$Player=="Player"),]
+  
+  # add year drafted to each observation
+  df <- df %>%
+    mutate(year = year)
+
+  master_df <- rbind(master_df, df)
+}
+```
+# Part 2: Data Processing and Preparation
+
+Load the NFL draft history data, containing the draft data from rounds 1-4 from the 1970-2016 NFL draft.
+```{r cars}
+head(master_df)
+
+master_df <- master_df[complete.cases(master_df[,12:13]),]
+master_df$Rnd <- as.factor(master_df$Rnd)
+
+master_df$Age <- as.integer(master_df$Age)
+master_df$CarAV <- as.integer(master_df$CarAV)
+master_df$DrAV <- as.integer(master_df$DrAV)
+master_df$G <- as.integer(master_df$G)
+master_df$Pick <- as.integer(master_df$Pick)
+```
+
+First, we want to break up our data into 4 periods. Then for each period, we will take average career value of each position grouped by each round that the player was selected. We will make a new pos_df dataframe with these groupings.
+
+```{r positions}
+pos_df <- master_df %>%
+  mutate(period = cut(year, breaks=4)) %>%
+  group_by(period, Pos, Rnd) %>%
+  summarise(Avg_AV = mean(CarAV))
+
+head(pos_df)
+```
+
+# Part 3: Exploratory Data Analysis
+
+## Trends in Average value
+Has average value for players selected in different rounds gone up over time?
+Have GMs gotten better at drafting in the first round, second round, etc...?
+
+```{r avg_val_rd1}
+
+avg_val_df <- master_df %>%
+  group_by(year, Rnd) %>%
+  summarise(Avg_AV = mean(CarAV))
+
+avg_val_df %>%
+  group_by(Rnd) %>%
+  ggplot(mapping=aes(x=year, y=Avg_AV, color=Rnd)) +
+    geom_point() +
+    labs(x = "Year", y = "Average Career Value", title = "Average Value for Players Drafted in Different Rounds Over Time") + 
+    geom_smooth(method=lm) 
+```
+
+Seems like GMs have not gotten better at drafting in any of the first four rounds. In fact, we see a slight decline in average value for all rounds over time. We do see that GMs are selecting better players in the earlier rounds, as generally the average value for the earlier rounds is consistently higher than the lower rounds throughout the years. We see the trends spread out as time goes on as well.
+
+## Analyzing the Quarterback position
+
+Lets analyze the average values of different positions grouped by round and time period in which they were drafted. Let's start with the most important position in football.
+
+```{r qb}
+pos_df %>%
+  filter(Pos == "QB") %>%
+  group_by(Rnd) %>%
+  ggplot(mapping=aes(x=period, y=Avg_AV, fill=Rnd)) +
+    geom_bar(stat="identity", position = "dodge") +
+    labs(x = "Year", y = "Average Career Value", title = "Average Value for QBs Drafted in Different Rounds Over Different Time Periods")
+```
+In the past 20 years (2000-2020), it is much more likely to hit on a QB in the first round than in any of the other rounds. We see a huge drop in average value after the first round in the past 20 years. Average value dips in half after that, and continues to decrease until the 7th round. It is interesting to note that the 7th round averge value shoots up again to about the same average values of the 3rd and 4th round in the 2000s.
+
+Before then, from 1990-2000, we see that the 6th round was a  value pick for QB, although Tom Brady might be the outlier that is skewing those numbers. But we also see that there was far more value in the second round QB selection from 1980-2000 than in the past 20 years.
+
+
+```{r qb2}
+
+master_df %>%
+  filter(year >= 2000) %>%
+  filter(Pos == "QB") %>%
+  ggplot(mapping=aes(x=Pick, y=CarAV)) +
+    geom_point()  +
+    labs(x = "Pick", y = "Career Value", title = "Average Value over picks for QBs Drafted in the 2000s") + 
+    geom_smooth(method='loess')
+```
+
+As we would expect the trend is that there is a decline in value until about pick 100, where the career value seems to be about the same from about pick 100-250. This would suggest that seelcting a QB at picks 100-150 would, statistically speaking, provide less bang for your buck, as you could likely get a player of the same quality with some of your later draft capital.
+
+```{r qb3}
+
+master_df %>%
+  filter(year >= 2000) %>%
+  filter(Pos == "QB") %>%
+  ggplot(mapping=aes(x=factor(Rnd), y=CarAV)) +
+    geom_violin()  +
+    labs(x = "Rnd", y = "Career Value", title = "Average Value over Round for QBs Drafted in the 2000s") + 
+    geom_smooth(method=lm)
+```
+
+As we would expect, the violin plots show us that most of the QBs selected in rounds 5-7 turn out to be busts, as most of the career values end up towards the bottom of the violin. 
+
+However, the distributions reaffirm what we have seen before in our Round 1 QBs. The spread of the data is far greater in round 1, and decreases heavily in round 2, and from there the decreases in spread are less drastic, suggesting that you have more of a shot at getting a good player in round 1 than in any other round.
+
+## Analyzing the WR and RB positions
+
+Next we will provide the same graphs to provide similar insight into the RB and WR selections of the draft.
+
+# Part 4: Machine Learning
+
+## Predicing the Rookie Offensive MVP
