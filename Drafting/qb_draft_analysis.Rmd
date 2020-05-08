@@ -1,5 +1,5 @@
 ---
-title: 'NFL Draft Analysis: The Quarterback'
+title: 'NFL Draft Analysis'
 author: "Philip Ipe"
 date: "5/8/2020"
 output: html_document
@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 options(warn = -1)
 library(tidyverse)
 library(rvest)
+library(gridExtra)
 setwd("/Users/PhilipIpe/Documents/Data Science/Projects/NFL Analytics/Drafting")
 ```
 
@@ -121,40 +122,47 @@ Seems like GMs have not gotten better at drafting in any of the first four round
 Lets analyze the average values of different positions grouped by round and time period in which they were drafted. Let's start with the most important position in football.
 
 ```{r qb}
-pos_df %>%
+qb_bar <- pos_df %>%
   filter(Pos == "QB") %>%
   group_by(Rnd) %>%
   ggplot(mapping=aes(x=period, y=Avg_AV, fill=Rnd)) +
     geom_bar(stat="identity", position = "dodge") +
     labs(x = "Year", y = "Average Career Value", title = "Average Value for QBs Drafted in Different Rounds Over Different Time Periods")
+
+qb_bar
 ```
+
 In the past 20 years (2000-2020), it is much more likely to hit on a QB in the first round than in any of the other rounds. We see a huge drop in average value after the first round in the past 20 years. Average value dips in half after that, and continues to decrease until the 7th round. It is interesting to note that the 7th round averge value shoots up again to about the same average values of the 3rd and 4th round in the 2000s.
 
 Before then, from 1990-2000, we see that the 6th round was a  value pick for QB, although Tom Brady might be the outlier that is skewing those numbers. But we also see that there was far more value in the second round QB selection from 1980-2000 than in the past 20 years.
 
-
+Now let's focus our attention on the past 20 years and graph some visualizations of that data.
 ```{r qb2}
 
-master_df %>%
+qb_av_pick <- master_df %>%
   filter(year >= 2000) %>%
   filter(Pos == "QB") %>%
   ggplot(mapping=aes(x=Pick, y=CarAV)) +
     geom_point()  +
     labs(x = "Pick", y = "Career Value", title = "Average Value over picks for QBs Drafted in the 2000s") + 
     geom_smooth(method='loess')
+
+qb_av_pick
 ```
 
 As we would expect the trend is that there is a decline in value until about pick 100, where the career value seems to be about the same from about pick 100-250. This would suggest that seelcting a QB at picks 100-150 would, statistically speaking, provide less bang for your buck, as you could likely get a player of the same quality with some of your later draft capital.
 
 ```{r qb3}
 
-master_df %>%
+qb_violin <- master_df %>%
   filter(year >= 2000) %>%
   filter(Pos == "QB") %>%
   ggplot(mapping=aes(x=factor(Rnd), y=CarAV)) +
     geom_violin()  +
     labs(x = "Rnd", y = "Career Value", title = "Average Value over Round for QBs Drafted in the 2000s") + 
     geom_smooth(method=lm)
+
+qb_violin
 ```
 
 As we would expect, the violin plots show us that most of the QBs selected in rounds 5-7 turn out to be busts, as most of the career values end up towards the bottom of the violin. 
@@ -165,6 +173,80 @@ However, the distributions reaffirm what we have seen before in our Round 1 QBs.
 
 Next we will provide the same graphs to provide similar insight into the RB and WR selections of the draft.
 
+It is interesting to note that the general trend has been to select RBs later in the draft, as RBs have always been considered as more expendable than a QB, and there seems to be a notion that you can always get a quality back in the later rounds, and that using first round capital on a RB is a poor management decision.
+
+
+```{r rb_wr1}
+
+rb_bar <- pos_df %>%
+  filter(Pos == "RB") %>%
+  group_by(Rnd) %>%
+  ggplot(mapping=aes(x=period, y=Avg_AV, fill=Rnd)) +
+    geom_bar(stat="identity", position = "dodge") +
+    labs(x = "Year", y = "Average Career Value", title = "Average Value for RBs Drafted in Different Rounds Over Different Time Periods")
+
+wr_bar <- pos_df %>%
+  filter(Pos == "WR") %>%
+  group_by(Rnd) %>%
+  ggplot(mapping=aes(x=period, y=Avg_AV, fill=Rnd)) +
+    geom_bar(stat="identity", position = "dodge") +
+    labs(x = "Year", y = "Average Career Value", title = "Average Value for WRs Drafted in Different Rounds Over Different Time Periods")
+
+grid.arrange(qb_bar, rb_bar, wr_bar, ncol=3)
+```
+
+Not as drastic of a difference in rounds 1 and 2 in the WR group. The RB average value in the 2000s seems to resemble the QB position.
+
+```{r rb_wr2}
+
+rb_av_pick <- master_df %>%
+  filter(year >= 2000) %>%
+  filter(Pos == "RB") %>%
+  ggplot(mapping=aes(x=Pick, y=CarAV)) +
+    geom_point()  +
+    labs(x = "Pick", y = "Career Value", title = "Average Value over picks for RBs") + 
+    geom_smooth(method='loess')
+
+wr_av_pick <- master_df %>%
+  filter(year >= 2000) %>%
+  filter(Pos == "WR") %>%
+  ggplot(mapping=aes(x=Pick, y=CarAV)) +
+    geom_point()  +
+    labs(x = "Pick", y = "Career Value", title = "Average Value over picks for WRs") + 
+    geom_smooth(method='loess')
+
+grid.arrange(qb_av_pick, rb_av_pick, wr_av_pick, ncol=3)
+
+```
+
+Much less steep of a drop off between round 1 to 2 in the WR group.
+
+Again we see a trend that by pick 100 the value seems to hit a plateue.
+
+```{r rb_wr3}
+
+rb_violin <- master_df %>%
+  filter(year >= 2000) %>%
+  filter(Pos == "RB") %>%
+  ggplot(mapping=aes(x=factor(Rnd), y=CarAV)) +
+    geom_violin()  +
+    labs(x = "Rnd", y = "Career Value", title = "Average Value over Round for RBs") + 
+    geom_smooth(method=lm)
+
+wr_violin <- master_df %>%
+  filter(year >= 2000) %>%
+  filter(Pos == "WR") %>%
+  ggplot(mapping=aes(x=factor(Rnd), y=CarAV)) +
+    geom_violin()  +
+    labs(x = "Rnd", y = "Career Value", title = "Average Value over Round for WRs") + 
+    geom_smooth(method=lm)
+
+grid.arrange(qb_violin, rb_violin, wr_violin, ncol=3)
+```
+
+RBs in Round 1 always produce.
+We again see that round 2 is a value round for WRs as it appears to resemble the type of value you get out of round 1.
+
 # Part 4: Machine Learning
 
-## Predicing the Rookie Offensive MVP
+## Predicting the Rookie Offensive MVP
