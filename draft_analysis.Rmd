@@ -62,6 +62,44 @@ for (year in 1970:2016){
 }
 ```
 
+We will also scrape the data from the 2020 draft for use in our machine learning problem and save it to our df variable.
+
+```{r scrape2020}
+
+draft_url <- "https://www.pro-football-reference.com/years/2020/draft.htm"
+draft_html <- read_html(draft_url)
+
+df <- draft_html %>%
+  html_node("table") %>%
+  html_table()
+
+names(df) <- as.character(unlist(df[1,]))
+df <- df[-1,]
+  
+# get rid of the columns we dont care about
+df <- df[,1:6]
+
+# filter out certain rounds
+df <- df %>%
+  filter(Rnd < 8)
+  
+# get rid of blank rows
+df <-df[!(df$Player=="Player"),]
+  
+# add year drafted to each observation
+df <- df %>%
+  mutate(year = year)
+
+df[is.na(df)] <- 22
+
+df$Pick <- as.integer(df$Pick)
+df$Age <- as.integer(df$Age)
+
+df$Tm <- as.factor(df$Tm)
+df$Pos <- as.factor(df$Pos)
+
+```
+
 Next we will scrape the AP Offensive Rookie of the Year Winners from the same website.
 
 ```{r scrape_ROTY}
@@ -75,12 +113,14 @@ roty_df <- draft_html %>%
 ```
 # Part 2: Data Processing and Preparation
 
-Load the NFL draft history data, containing the draft data from rounds 1-4 from the 1970-2016 NFL draft.
+Load the NFL draft history data, containing the draft data from rounds 1-4 from the 1970-2016 NFL draft. Remove all of the missing data entries, and convert the necessary columns to integers.
 ```{r cars}
 head(master_df)
 
 master_df <- master_df[complete.cases(master_df[,12:13]),]
 master_df$Rnd <- as.factor(master_df$Rnd)
+master_df$Tm <- as.factor(master_df$Tm)
+master_df$Pos <- as.factor(master_df$Pos)
 
 master_df$Age <- as.integer(master_df$Age)
 master_df$CarAV <- as.integer(master_df$CarAV)
@@ -257,7 +297,47 @@ We again see that round 2 is a value round for WRs as it appears to resemble the
 Let's add a variable that is TRUE when the player that was drafted was Offensive Rookie of the Year, and FALSE otherwise.
 ```{r add_roty}
 master_df <- master_df %>%
-  mutate(roty = Player %in% roty_df$Player)
+  mutate(roty = ifelse(Player %in% roty_df$Player, "Yes", "No"))
+
+master_df$roty <- as.factor(master_df$roty)
 ```
 
 ## Predicting the Rookie Offensive MVP
+
+First, lets control the resampling of our data. In this case, we’re going to cross-validate the data 3 times, therefore training it 3 times on different portions of the data before settling on the best tuning parameters (for gbm it is trees, shrinkage, and interaction depth).
+
+```{r ml_control}
+
+library(caret)
+
+outcome_name <- 'roty'
+predictor_names <- c('Tm', 'Pos', 'Age', 'Pick')
+
+objControl <- trainControl(method='cv', number=3, returnResamp='none', summaryFunction = twoClassSummary, classProbs = TRUE)
+
+```
+
+Now to actually train the model...
+
+```{r train_model}
+
+model <- train(master_df[,predictor_names], master_df[,outcome_name], 
+               method = "gbm",
+               trControl = objControl,
+               metric = "ROC",
+               preProc = c("center", "scale"))
+```
+
+
+```{r sum_model}
+summary(model)
+```
+
+The summaries tell us how much influence each variable had on the model. It was interesting to see the little influence age had in predicting the model. It was also interesting that position had a bigger influence than the team and age.
+
+Now let's use the model to predict the probabilities that each player from the 2020 draft will become Offensive Rookie of the Year. 
+```{r eval}
+
+predictions <- predict(object=model, df[,predictor_names], type='prob')
+head(predictions)
+```
