@@ -17,7 +17,7 @@ options(warn = -1)
 library(tidyverse)
 library(rvest)
 library(gridExtra)
-setwd("/Users/PhilipIpe/Documents/Data Science/Projects/NFL Analytics/Drafting")
+setwd("/Users/PhilipIpe/Documents/Data Science/Projects/NFL Draft Analytics/")
 ```
 
 # Part 1: Data Collection
