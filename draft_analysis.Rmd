@@ -238,43 +238,56 @@ It is interesting to note that the general trend has been to select RBs later in
 ```{r rb_wr1}
 
 rb_bar <- pos_df %>%
-  filter(Pos == "RB") %>%
+  filter(Pos == "RB" & period == "(2e+03,2.02e+03]") %>%
   group_by(Rnd) %>%
   ggplot(mapping=aes(x=period, y=Avg_AV, fill=Rnd)) +
     geom_bar(stat="identity", position = "dodge") +
-    labs(x = "Year", y = "Average Career Value", title = "Average Value for RBs Drafted in Different Rounds Over Different Time Periods")
+    labs(x = "Year", y = "Average Career Value", title = "Average Value for RBs")
 
 wr_bar <- pos_df %>%
-  filter(Pos == "WR") %>%
+  filter(Pos == "WR" & period == "(2e+03,2.02e+03]") %>%
   group_by(Rnd) %>%
   ggplot(mapping=aes(x=period, y=Avg_AV, fill=Rnd)) +
     geom_bar(stat="identity", position = "dodge") +
-    labs(x = "Year", y = "Average Career Value", title = "Average Value for WRs Drafted in Different Rounds Over Different Time Periods")
+    labs(x = "Year", y = "Average Career Value", title = "Average Value for WRs")
 
-grid.arrange(qb_bar, rb_bar, wr_bar, ncol=3)
+qb_bar <- pos_df %>%
+  filter(Pos == "QB" & period == "(2e+03,2.02e+03]") %>%
+  group_by(Rnd) %>%
+  ggplot(mapping=aes(x=period, y=Avg_AV, fill=Rnd)) +
+    geom_bar(stat="identity", position = "dodge") +
+    labs(x = "Year", y = "Average Career Value", title = "Average Value for QBs")
+
+grid.arrange(qb_bar, rb_bar, wr_bar, ncol=3, top = "Average Value in Different Rounds over the 2000s")
 ```
 
 Not as drastic of a difference in rounds 1 and 2 in the WR group. The RB average value in the 2000s seems to resemble the QB position.
 
 ```{r rb_wr2}
 
-rb_av_pick <- master_df %>%
+qb_av_pick <- master_df %>%
   filter(year >= 2000) %>%
-  filter(Pos == "RB") %>%
+  filter(Pos == "QB") %>%
   ggplot(mapping=aes(x=Pick, y=CarAV)) +
     geom_point()  +
-    labs(x = "Pick", y = "Career Value", title = "Average Value over picks for RBs") + 
+    labs(x = "Pick", y = "Career Value", title = "QB Average Value") + 
+    geom_smooth(method='loess')
+
+rb_av_pick <- master_df %>%
+  filter(year >= 2000 & Pos == "RB") %>%
+  ggplot(mapping=aes(x=Pick, y=CarAV)) +
+    geom_point()  +
+    labs(x = "Pick", y = "Career Value", title = "RB Average Value") + 
     geom_smooth(method='loess')
 
 wr_av_pick <- master_df %>%
-  filter(year >= 2000) %>%
-  filter(Pos == "WR") %>%
+  filter(year >= 2000 & Pos == "WR") %>%
   ggplot(mapping=aes(x=Pick, y=CarAV)) +
     geom_point()  +
-    labs(x = "Pick", y = "Career Value", title = "Average Value over picks for WRs") + 
+    labs(x = "Pick", y = "Career Value", title = "WR Average Value") + 
     geom_smooth(method='loess')
 
-grid.arrange(qb_av_pick, rb_av_pick, wr_av_pick, ncol=3)
+grid.arrange(qb_av_pick, rb_av_pick, wr_av_pick, ncol=3, top = "Average Value Over Picks in the 2000s")
 
 ```
 
@@ -300,7 +313,7 @@ wr_violin <- master_df %>%
     labs(x = "Rnd", y = "Career Value", title = "Average Value over Round for WRs") + 
     geom_smooth(method=lm)
 
-grid.arrange(qb_violin, rb_violin, wr_violin, ncol=3)
+grid.arrange(qb_violin, rb_violin, wr_violin, ncol=3, top = "Average Value over Round")
 ```
 
 RBs in Round 1 always produce.
@@ -310,7 +323,7 @@ We again see that round 2 is a value round for WRs as it appears to resemble the
 
 ## Predicting the Rookie Offensive MVP
 
-Now, right off the bat, we hope that the model will predict that Joe Burrow has a higher likelihood of winning the MVP. 
+Now, right off the bat, we hope that the model will predict that Joe Burrow has a higher likelihood of winning the MVP. Not only because he's a stud, but because he's fresh off the Heisman, and the first overall pick QB that is going to a team in desperate need of good QB play. Vegas has him as the clear favorite to win, and the season is set up for him to take the title, so if our model is worth anything
 
 First, lets control the resampling of our data. In this case, we’re going to cross-validate the data 3 times, therefore training it 3 times on different portions of the data before settling on the best tuning parameters (for gbm it is trees, shrinkage, and interaction depth).
 
