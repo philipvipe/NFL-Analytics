@@ -16,13 +16,19 @@ options(warn = -1)
 library(tidyverse)
 library(rvest)
 library(gridExtra)
+library(caret)
+library(knitr)
 setwd("/Users/PhilipIpe/Documents/Data Science/Projects/NFL Draft Analytics/")
 ```
 
 # Part 1: Data Collection
 
-We will scrape historical draft data from Pro-Football Reference from years 1970 till 2016. We chose to stop at 2016 since rookies usually sign 4 year deals, so the four year mark is typically when each team will finish evaulating each player they drafted, and make a decision on whether or not to resign the player. So, the jury is still out on players drafted after 2016.  We will filter out any selections after round 7, as since 1994, the NFL draft has only consisted of 7 rounds.
+We will scrape historical draft data from Pro-Football Reference from years 1970 till 2016. We chose to stop at 2016 since rookies usually sign 4 year deals, so the four year mark is typically when each team will finish evaulating each player they drafted, and make a decision on whether or not to resign the player. So, the jury is still out on players drafted after 2016.  We will filter out any selections after round 7, as since 1994, the NFL draft has only consisted of 7 rounds. 
 
+The result will be stored in the dataframe *master_df* with entities for each player.
+
+Note: We will also do some process in this step as well, but we will go into more detail on that when we repeat the processing steps in another dataframe later in the walkthrough.
+    
 ```{r scraping}
 
 master_df <- data.frame()
@@ -63,7 +69,7 @@ for (year in 1970:2016){
 }
 ```
 
-We will also scrape the data from the 2020 draft for use in our machine learning problem and save it to our df variable. 
+We will also scrape the data from the 2020 draft in the same way for use in our machine learning problem and save it to our *df_2020* variable. 
 
 ```{r scrape2020}
 
@@ -92,9 +98,10 @@ roty_df <- draft_html %>%
 
 # Part 2: Data Processing and Preparation
 
-Load the NFL draft history data, containing the draft data from rounds 1-7 from the 1970-2016 NFL draft. Remove all of the missing data entries, and convert the necessary columns to integers. 
-```{r cars}
-head(master_df)
+Load the NFL draft history data from *master_df*, containing the draft data from rounds 1-7 from the 1970-2016 NFL draft. Remove all of the missing data entries, and convert the necessary columns to integers. 
+
+    
+```{r process_master}
 
 master_df <- master_df[complete.cases(master_df[,12:13]),]
 master_df$Rnd <- as.factor(master_df$Rnd)
@@ -106,9 +113,43 @@ master_df$CarAV <- as.integer(master_df$CarAV)
 master_df$DrAV <- as.integer(master_df$DrAV)
 master_df$G <- as.integer(master_df$G)
 master_df$Pick <- as.integer(master_df$Pick)
+
+kable(head(master_df))
 ```
 
-Now let's process our 2020 Draft data. First, we will get rid of columns we don't care about, then remove blank rows, add year drafted to each observation, and convert the necessary columns to integers, all like we did for the historical draft dataset. We will also filter the data to only include quarterbacks, wide receivers, and running backs.
+Our *master_df* dataframe now has entities for each player with the following variables:
+
+    Rnd : Round in which the player was selected
+    
+    Pick: Overall selection in draft
+    
+    Tm  : Team
+    
+    Player: Player name
+    
+    Pos : Position
+    
+    Age
+    
+    To: Last year in the league
+    
+    AP1: First team All-Pro selections
+    
+    PB: Pro Bowl selections
+    
+    St: Number of years as primary starter for his team at his position
+    
+    CarAv: Weighted Career Approximate Value
+    
+                  = 100% of AV of his best season + 95% of AV of his next best season + 90% of AV of his third-best season + ...
+                  
+    DrAV: Average value accumulated for the team that drafted this player
+    
+    G : Games Played
+    
+    year: Year drafted
+
+Now let's process our 2020 Draft data. First, we will get rid of columns we don't care about, then remove blank rows, add year drafted to each observation, and convert the necessary columns to integers, all like we did for the historical draft dataset. We will also filter this dataframe to only include quarterbacks, wide receivers, and running backs.
 
 ```{r process2020}
 # get rid of the columns we dont care about
@@ -132,9 +173,13 @@ df_2020$Pick <- as.integer(df_2020$Pick)
 df_2020$Age <- as.integer(df_2020$Age)
 df_2020$Tm <- as.factor(df_2020$Tm)
 df_2020$Pos <- as.factor(df_2020$Pos)
+
+kable(head(df_2020))
 ```
 
-Now let's create a dataframe in which we can compare different positions that were drafted. First, we want to break up our data into 4 periods. Then for each period, we will take average career value of each position grouped by each round that the player was selected. We will make a new pos_df dataframe with these groupings.
+So, now our *df_2020* dataframe contains only the offensive skill position players that were drafted in 2020 as entities. The variables of this dataframe are **Rnd**, **Pick**, **Tm**, **Player**, **Pos**, **Age**, and **Year** like we have in our *master_df* variable.
+
+Now let's create a dataframe in which we can compare different positions that were drafted. First, we want to break up our data into 4 periods. Then for each period, we will take average career value of each position grouped by each round that the player was selected. We will make a new *pos_df* dataframe with these groupings.
 
 ```{r positions}
 pos_df <- master_df %>%
@@ -142,10 +187,10 @@ pos_df <- master_df %>%
   group_by(period, Pos, Rnd) %>%
   summarise(Avg_AV = mean(CarAV))
 
-head(pos_df)
+kable(head(pos_df))
 ```
 
-Let's also add a dataframe that contains a variable that is TRUE when the player that was drafted was Offensive Rookie of the Year, and FALSE otherwise. We will also filter out all of the defensive players in this new dataframe.
+Let's also add a dataframe *off_df* that is the same as *master_df*, but contains a variable **roty** that is Yes when the player that was drafted from 1970-2016 was Offensive Rookie of the Year, and No otherwise. We will also filter the dataframe to only contain offensive skill position players, like we did for the 2020 draft data.
 
 ```{r off_roty}
 off_df <- master_df %>%
@@ -153,10 +198,14 @@ off_df <- master_df %>%
   filter(Pos == "QB" | Pos == "WR" | Pos == "RB")
 
 off_df$roty <- as.factor(off_df$roty)
+
+kable(head(off_df))
 ```
+
 # Part 3: Exploratory Data Analysis
 
-## Trends in Average value
+## Trends in Average Value
+
 Has average value for players selected in different rounds gone up over time?
 Have GMs gotten better at drafting in the first round, second round, etc...?
 
@@ -176,7 +225,7 @@ avg_val_df %>%
 
 Seems like GMs have not gotten better at drafting in any of the first four rounds. In fact, we see a slight decline in average value for all rounds over time. We do see that GMs are selecting better players in the earlier rounds, as generally the average value for the earlier rounds is consistently higher than the lower rounds throughout the years. We see the trends spread out as time goes on as well.
 
-## Analyzing the Quarterback position
+## Analyzing the Quarterback Position
 
 Lets analyze the average values of different positions grouped by round and time period in which they were drafted. Let's start with the most important position in football.
 
@@ -228,7 +277,7 @@ As we would expect, the violin plots show us that most of the QBs selected in ro
 
 However, the distributions reaffirm what we have seen before in our Round 1 QBs. The spread of the data is far greater in round 1, and decreases heavily in round 2, and from there the decreases in spread are less drastic, suggesting that you have more of a shot at getting a good player in round 1 than in any other round.
 
-## Analyzing the WR and RB positions
+## Analyzing the WR and RB
 
 Next we will provide the same graphs to provide similar insight into the RB and WR selections of the draft.
 
@@ -323,25 +372,26 @@ We again see that round 2 is a value round for WRs as it appears to resemble the
 
 ## Predicting the Rookie Offensive MVP
 
-Now, right off the bat, we hope that the model will predict that Joe Burrow has a higher likelihood of winning the MVP. Not only because he's a stud, but because he's fresh off the Heisman, and the first overall pick QB that is going to a team in desperate need of good QB play. Vegas has him as the clear favorite to win, and the season is set up for him to take the title, so if our model is worth anything
+Now, right off the bat, we hope that the model will predict that Joe Burrow has a higher likelihood of winning the MVP. Not only because he's a stud, but because he's fresh off the Heisman, and the first overall pick QB that is going to a team in desperate need of good QB play. Vegas has him as the clear favorite to win, and the season is set up for him to take the title, so if our model is worth anything, it should at the very least have Joe Burrow as one of its top predictions for the award.
 
-First, lets control the resampling of our data. In this case, we’re going to cross-validate the data 3 times, therefore training it 3 times on different portions of the data before settling on the best tuning parameters (for gbm it is trees, shrinkage, and interaction depth).
+First, lets control the resampling of our data. In this case, we’re going to cross-validate the data 3 times, therefore training the model 3 times on different portions of the data before settling on the best tuning parameters. For gbm, the tuning parameters are trees, shrinkage, and interaction depth.
 
 ```{r ml_control}
-
-library(caret)
-
-outcome_name <- 'roty'
-predictor_names <- c('Tm', 'Pos', 'Pick')
 
 objControl <- trainControl(method='cv', number=3, returnResamp='none', summaryFunction = twoClassSummary, classProbs = TRUE)
 
 ```
 
 # Creating our Model
+
 Now to actually train the model...
 
+First, we will set the predictor variables to **Tm**, **Pos**, and **Pick**, and the sole outcome variable as **roty**. Then we will use the *train()* method from the caret package to train the model using the *off_df* variable that contains all our historical draft data on all the offensive skill position players.
+
 ```{r train_model}
+
+outcome_name <- 'roty'
+predictor_names <- c('Tm', 'Pos', 'Pick')
 
 set.seed(123)
 model <- train(off_df[,predictor_names], off_df[,outcome_name], 
@@ -351,14 +401,15 @@ model <- train(off_df[,predictor_names], off_df[,outcome_name],
                preProc = c("center", "scale"))
 ```
 
+We will print the summary of the model below, which will display the relative influences of each of the predictor variables.
 
 ```{r sum_model}
 summary(model)
 ```
 
-The summaries tell us how much influence each variable had on the model. It was interesting to see that position had such absolutely zero influence in predicting the model. This tells us that quarterbacks, wide receivers, or running backs do not have a leg up on each other for the MVP award! 
+The summaries tell us how much relative influence each variable had on the model. It was interesting to see that position had such absolutely zero influence in predicting the model. This tells us that quarterbacks, wide receivers, or running backs do not have a leg up on each other for the MVP award! 
 
-What is even more interesting is that the team the player was drafted to seemed to influence the model more than the pick number itself! Before I had trained the model, I expected pick, position, and then team to have relative influence in that order!
+What is even more interesting is that the team the player was drafted to seemed to influence the model more than the pick number itself! Before I had trained the model, I expected pick, position, and then team to have relative influence in that order.
 
 
 # Testing against 2017-2019 data
@@ -372,7 +423,7 @@ Now let's use the model to predict the probabilities that each player from the 2
 ```{r eval}
 
 predictions <- predict(object=model, df_2020[,predictor_names], type='prob')
-head(predictions)
+kable(head(predictions))
 ```
 
 Now let's join our prediction probabilities to the actual data, so we can look at the prediction probabilities for each player.
@@ -383,14 +434,16 @@ df_2020 <- merge(df_2020, predictions, by = "row.names", all.x = FALSE, all.y = 
 df_2020$No.x <- NULL
 ```
 
-Now let's get the top 7 players that the model is most certain will be the Offensive Rookie of the Year
+Now let's get the top 10 players that the model is most certain will be the Offensive Rookie of the Year
 
 ```{r top10_roty}
 
 top10_roty <- df_2020 %>%
   top_n(10, Yes)
 
-top10_roty
+kable(top10_roty)
 ```
 
-Joe Burrow is our model's top prediction to win the MVP!!! We also see that Cam Akers, Tua, Henry Ruggs III, Jerry Jeudy, CeDee Lamb, and Justin Jefferson also appear in the top 10. All of these players currently have the highest odds to win the the Offensive MVP according to OddsShark.
+Joe Burrow is our model's top prediction to win the MVP!!! We also see that Cam Akers, Tua, Henry Ruggs III, Jerry Jeudy, CeDee Lamb, and Justin Jefferson also appear in the top 10. All of these players are among those that have the highest odds to win the the Offensive MVP according to OddsShark.
+
+Again, it's important to highlight that we trained this model JUST based on the pick number, team, and position for each player, whereas the Vegas odds have most certainly taken into account the player's performance in college as well.
