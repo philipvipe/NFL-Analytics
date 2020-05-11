@@ -222,7 +222,6 @@ for (year in 1970:2016){
   df &lt;- df %&gt;%
     mutate(year = year)
     
-
   master_df &lt;- rbind(master_df, df)
 }</code></pre>
 <p>We will also scrape the data from the 2020 draft in the same way for use in our machine learning problem and save it to our <em>df_2020</em> variable.</p>
@@ -235,7 +234,30 @@ df_2020 &lt;- draft_html %&gt;%
 
 names(df_2020) &lt;- as.character(unlist(df_2020[1,]))
 df_2020 &lt;- df_2020[-1,]</code></pre>
-<p>Next we will scrape the AP Offensive Rookie of the Year Winners from the same website.</p>
+<p>We will also scrape the 2017-2019 NFL draft data into a seperate dataframe <em>test_df</em>, which will be used to test our machine learning model that we will develop later in the tutorial.</p>
+<pre class="r"><code>test_df &lt;- data.frame()
+for (year in 2017:2019){
+  
+  draft_url &lt;- paste(&quot;https://www.pro-football-reference.com/years/&quot;, year, &quot;/draft.htm&quot;, sep=&quot;&quot;)
+  draft_html &lt;- read_html(draft_url)
+
+  df &lt;- draft_html %&gt;%
+    html_node(&quot;table&quot;) %&gt;%
+    html_table()
+
+  names(df) &lt;- as.character(unlist(df[1,]))
+  df &lt;- df[-1,]
+  
+  # get rid of the columns we dont care about
+  df &lt;- df[,1:6]
+  
+  # add year drafted to each observation
+  df &lt;- df %&gt;%
+    mutate(year = year)
+
+  test_df &lt;- rbind(test_df, df)
+}</code></pre>
+<p>Next we will scrape the AP Offensive Rookie of the Year Winners from the same website, again for our machine learning problem.</p>
 <pre class="r"><code>roty_url &lt;- &quot;https://www.pro-football-reference.com/awards/ap-offensive-rookie-of-the-year-award.htm&quot;
 draft_html &lt;- read_html(roty_url)
 
@@ -457,7 +479,7 @@ kable(head(df_2020))</code></pre>
 <td align="left">Joe Burrow</td>
 <td align="left">QB</td>
 <td align="right">23</td>
-<td align="right">2016</td>
+<td align="right">2019</td>
 </tr>
 <tr class="even">
 <td align="left">1</td>
@@ -466,7 +488,7 @@ kable(head(df_2020))</code></pre>
 <td align="left">Tua Tagovailoa</td>
 <td align="left">QB</td>
 <td align="right">22</td>
-<td align="right">2016</td>
+<td align="right">2019</td>
 </tr>
 <tr class="odd">
 <td align="left">1</td>
@@ -475,7 +497,7 @@ kable(head(df_2020))</code></pre>
 <td align="left">Justin Herbert</td>
 <td align="left">QB</td>
 <td align="right">22</td>
-<td align="right">2016</td>
+<td align="right">2019</td>
 </tr>
 <tr class="even">
 <td align="left">1</td>
@@ -484,7 +506,7 @@ kable(head(df_2020))</code></pre>
 <td align="left">Henry Ruggs III</td>
 <td align="left">WR</td>
 <td align="right">21</td>
-<td align="right">2016</td>
+<td align="right">2019</td>
 </tr>
 <tr class="odd">
 <td align="left">1</td>
@@ -493,7 +515,7 @@ kable(head(df_2020))</code></pre>
 <td align="left">Jerry Jeudy</td>
 <td align="left">WR</td>
 <td align="right">21</td>
-<td align="right">2016</td>
+<td align="right">2019</td>
 </tr>
 <tr class="even">
 <td align="left">1</td>
@@ -502,11 +524,100 @@ kable(head(df_2020))</code></pre>
 <td align="left">CeeDee Lamb</td>
 <td align="left">WR</td>
 <td align="right">21</td>
-<td align="right">2016</td>
+<td align="right">2019</td>
 </tr>
 </tbody>
 </table>
 <p>So, now our <em>df_2020</em> dataframe contains only the offensive skill position players that were drafted in 2020 as entities. The variables of this dataframe are <strong>Rnd</strong>, <strong>Pick</strong>, <strong>Tm</strong>, <strong>Player</strong>, <strong>Pos</strong>, <strong>Age</strong>, and <strong>Year</strong> like we have in our <em>master_df</em> variable.</p>
+<p>We will process the <em>test_df</em> dataframe in the same way.</p>
+<pre class="r"><code># filter out certain rounds
+test_df &lt;- test_df %&gt;%
+  filter(Rnd &lt; 8)
+  
+# get rid of blank rows
+test_df &lt;-test_df[!(test_df$Player==&quot;Player&quot;),]
+  
+# filter so dataframe only contains offensive skill position players.
+test_df &lt;- test_df %&gt;%
+  filter(Pos == &quot;QB&quot; | Pos == &quot;WR&quot; | Pos == &quot;RB&quot;)
+
+test_df[is.na(test_df)] &lt;- 22
+
+test_df$Pick &lt;- as.integer(test_df$Pick)
+test_df$Age &lt;- as.integer(test_df$Age)
+test_df$Tm &lt;- as.factor(test_df$Tm)
+test_df$Pos &lt;- as.factor(test_df$Pos)
+
+kable(head(test_df))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Rnd</th>
+<th align="right">Pick</th>
+<th align="left">Tm</th>
+<th align="left">Player</th>
+<th align="left">Pos</th>
+<th align="right">Age</th>
+<th align="right">year</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="right">2</td>
+<td align="left">CHI</td>
+<td align="left">Mitchell Trubisky</td>
+<td align="left">QB</td>
+<td align="right">23</td>
+<td align="right">2017</td>
+</tr>
+<tr class="even">
+<td align="left">1</td>
+<td align="right">4</td>
+<td align="left">JAX</td>
+<td align="left">Leonard Fournette</td>
+<td align="left">RB</td>
+<td align="right">22</td>
+<td align="right">2017</td>
+</tr>
+<tr class="odd">
+<td align="left">1</td>
+<td align="right">5</td>
+<td align="left">TEN</td>
+<td align="left">Corey Davis</td>
+<td align="left">WR</td>
+<td align="right">22</td>
+<td align="right">2017</td>
+</tr>
+<tr class="even">
+<td align="left">1</td>
+<td align="right">7</td>
+<td align="left">LAC</td>
+<td align="left">Mike Williams</td>
+<td align="left">WR</td>
+<td align="right">22</td>
+<td align="right">2017</td>
+</tr>
+<tr class="odd">
+<td align="left">1</td>
+<td align="right">8</td>
+<td align="left">CAR</td>
+<td align="left">Christian McCaffrey</td>
+<td align="left">RB</td>
+<td align="right">21</td>
+<td align="right">2017</td>
+</tr>
+<tr class="even">
+<td align="left">1</td>
+<td align="right">9</td>
+<td align="left">CIN</td>
+<td align="left">John Ross</td>
+<td align="left">WR</td>
+<td align="right">22</td>
+<td align="right">2017</td>
+</tr>
+</tbody>
+</table>
 <p>Now let’s create a dataframe in which we can compare different positions that were drafted. First, we want to break up our data into 4 periods. Then for each period, we will take average career value of each position grouped by each round that the player was selected. We will make a new <em>pos_df</em> dataframe with these groupings.</p>
 <pre class="r"><code>pos_df &lt;- master_df %&gt;%
   mutate(period = cut(year, breaks=4)) %&gt;%
@@ -1065,11 +1176,8 @@ model &lt;- train(off_df[,predictor_names], off_df[,outcome_name],
 </div>
 <div id="testing-against-2017-2019-data" class="section level1">
 <h1>Testing against 2017-2019 data</h1>
-</div>
-<div id="predicting-the-2020-rookie-offensive-mvp" class="section level1">
-<h1>Predicting the 2020 Rookie Offensive MVP</h1>
-<p>Now let’s use the model to predict the probabilities that each player from the 2020 draft will become Offensive Rookie of the Year. This code will give us the probability that the model is sure about its choice that the observation will fall under the “No” and “Yes” category.</p>
-<pre class="r"><code>predictions &lt;- predict(object=model, df_2020[,predictor_names], type='prob')
+<p>Let’s test our model against the 2017, 2018, and 2019 datasets. To do this, we will use the <em>predict()</em> function in the caret package and feed it the test data. From there, <em>predict()</em> will calculate probabilities that the model is sure about it choice that each observation from <em>test_df</em> will fall under the “Yes” and “No” outcome categories. So the “Yes” variable corresponds to the probability the model is sure about its choice that the player will become Rookie MVP, and “No” = probability the model is sure the player will not be the Rookie MVP.</p>
+<pre class="r"><code>predictions &lt;- predict(object=model, test_df[,predictor_names], type='prob')
 kable(head(predictions))</code></pre>
 <table>
 <thead>
@@ -1080,34 +1188,669 @@ kable(head(predictions))</code></pre>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="right">0.7884537</td>
-<td align="right">0.2115463</td>
+<td align="right">0.8514218</td>
+<td align="right">0.1485782</td>
 </tr>
 <tr class="even">
-<td align="right">0.9124603</td>
-<td align="right">0.0875397</td>
+<td align="right">0.9160402</td>
+<td align="right">0.0839598</td>
 </tr>
 <tr class="odd">
+<td align="right">0.9185426</td>
+<td align="right">0.0814574</td>
+</tr>
+<tr class="even">
 <td align="right">0.9696058</td>
 <td align="right">0.0303942</td>
 </tr>
-<tr class="even">
-<td align="right">0.9651014</td>
-<td align="right">0.0348986</td>
-</tr>
 <tr class="odd">
-<td align="right">0.9377729</td>
-<td align="right">0.0622271</td>
+<td align="right">0.9110467</td>
+<td align="right">0.0889533</td>
 </tr>
 <tr class="even">
-<td align="right">0.9482607</td>
-<td align="right">0.0517393</td>
+<td align="right">0.9297818</td>
+<td align="right">0.0702182</td>
 </tr>
 </tbody>
 </table>
 <p>Now let’s join our prediction probabilities to the actual data, so we can look at the prediction probabilities for each player.</p>
+<pre class="r"><code>test_df &lt;- merge(test_df, predictions, by = &quot;row.names&quot;, all.x = FALSE, all.y = FALSE)
+test_df$No.x &lt;- NULL
+
+kable(head(test_df))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Row.names</th>
+<th align="left">Rnd</th>
+<th align="right">Pick</th>
+<th align="left">Tm</th>
+<th align="left">Player</th>
+<th align="left">Pos</th>
+<th align="right">Age</th>
+<th align="right">year</th>
+<th align="right">No</th>
+<th align="right">Yes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="left">1</td>
+<td align="right">2</td>
+<td align="left">CHI</td>
+<td align="left">Mitchell Trubisky</td>
+<td align="left">QB</td>
+<td align="right">23</td>
+<td align="right">2017</td>
+<td align="right">0.8514218</td>
+<td align="right">0.1485782</td>
+</tr>
+<tr class="even">
+<td align="left">10</td>
+<td align="left">2</td>
+<td align="right">40</td>
+<td align="left">CAR</td>
+<td align="left">Curtis Samuel</td>
+<td align="left">WR</td>
+<td align="right">21</td>
+<td align="right">2017</td>
+<td align="right">0.9818375</td>
+<td align="right">0.0181625</td>
+</tr>
+<tr class="odd">
+<td align="left">100</td>
+<td align="left">4</td>
+<td align="right">126</td>
+<td align="left">ATL</td>
+<td align="left">Ito Smith</td>
+<td align="left">RB</td>
+<td align="right">22</td>
+<td align="right">2018</td>
+<td align="right">0.9930543</td>
+<td align="right">0.0069457</td>
+</tr>
+<tr class="even">
+<td align="left">101</td>
+<td align="left">4</td>
+<td align="right">131</td>
+<td align="left">MIA</td>
+<td align="left">Kalen Ballage</td>
+<td align="left">RB</td>
+<td align="right">22</td>
+<td align="right">2018</td>
+<td align="right">0.9880447</td>
+<td align="right">0.0119553</td>
+</tr>
+<tr class="odd">
+<td align="left">102</td>
+<td align="left">4</td>
+<td align="right">132</td>
+<td align="left">BAL</td>
+<td align="left">Jaleel Scott</td>
+<td align="left">WR</td>
+<td align="right">23</td>
+<td align="right">2018</td>
+<td align="right">0.9987155</td>
+<td align="right">0.0012845</td>
+</tr>
+<tr class="even">
+<td align="left">103</td>
+<td align="left">4</td>
+<td align="right">133</td>
+<td align="left">GNB</td>
+<td align="left">J’Mon Moore</td>
+<td align="left">WR</td>
+<td align="right">23</td>
+<td align="right">2018</td>
+<td align="right">0.9884181</td>
+<td align="right">0.0115819</td>
+</tr>
+</tbody>
+</table>
+<p>Now let’s get the top 10 players that the model is most certain will be the Offensive Rookie of the Year for 2017, 2018, and 2019.</p>
+<pre class="r"><code>top10_roty_2017 &lt;- test_df %&gt;%
+  filter(year == 2017) %&gt;%
+  top_n(10, Yes)
+
+kable(top10_roty_2017)</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Row.names</th>
+<th align="left">Rnd</th>
+<th align="right">Pick</th>
+<th align="left">Tm</th>
+<th align="left">Player</th>
+<th align="left">Pos</th>
+<th align="right">Age</th>
+<th align="right">year</th>
+<th align="right">No</th>
+<th align="right">Yes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="left">1</td>
+<td align="right">2</td>
+<td align="left">CHI</td>
+<td align="left">Mitchell Trubisky</td>
+<td align="left">QB</td>
+<td align="right">23</td>
+<td align="right">2017</td>
+<td align="right">0.8514218</td>
+<td align="right">0.1485782</td>
+</tr>
+<tr class="even">
+<td align="left">11</td>
+<td align="left">2</td>
+<td align="right">41</td>
+<td align="left">MIN</td>
+<td align="left">Dalvin Cook</td>
+<td align="left">RB</td>
+<td align="right">22</td>
+<td align="right">2017</td>
+<td align="right">0.9524552</td>
+<td align="right">0.0475448</td>
+</tr>
+<tr class="odd">
+<td align="left">16</td>
+<td align="left">3</td>
+<td align="right">69</td>
+<td align="left">LAR</td>
+<td align="left">Cooper Kupp</td>
+<td align="left">WR</td>
+<td align="right">24</td>
+<td align="right">2017</td>
+<td align="right">0.9608239</td>
+<td align="right">0.0391761</td>
+</tr>
+<tr class="even">
+<td align="left">2</td>
+<td align="left">1</td>
+<td align="right">4</td>
+<td align="left">JAX</td>
+<td align="left">Leonard Fournette</td>
+<td align="left">RB</td>
+<td align="right">22</td>
+<td align="right">2017</td>
+<td align="right">0.9160402</td>
+<td align="right">0.0839598</td>
+</tr>
+<tr class="odd">
+<td align="left">3</td>
+<td align="left">1</td>
+<td align="right">5</td>
+<td align="left">TEN</td>
+<td align="left">Corey Davis</td>
+<td align="left">WR</td>
+<td align="right">22</td>
+<td align="right">2017</td>
+<td align="right">0.9185426</td>
+<td align="right">0.0814574</td>
+</tr>
+<tr class="even">
+<td align="left">31</td>
+<td align="left">4</td>
+<td align="right">117</td>
+<td align="left">LAR</td>
+<td align="left">Josh Reynolds</td>
+<td align="left">WR</td>
+<td align="right">22</td>
+<td align="right">2017</td>
+<td align="right">0.9608239</td>
+<td align="right">0.0391761</td>
+</tr>
+<tr class="odd">
+<td align="left">47</td>
+<td align="left">5</td>
+<td align="right">170</td>
+<td align="left">MIN</td>
+<td align="left">Rodney Adams</td>
+<td align="left">WR</td>
+<td align="right">22</td>
+<td align="right">2017</td>
+<td align="right">0.9584614</td>
+<td align="right">0.0415386</td>
+</tr>
+<tr class="even">
+<td align="left">5</td>
+<td align="left">1</td>
+<td align="right">8</td>
+<td align="left">CAR</td>
+<td align="left">Christian McCaffrey</td>
+<td align="left">RB</td>
+<td align="right">21</td>
+<td align="right">2017</td>
+<td align="right">0.9110467</td>
+<td align="right">0.0889533</td>
+</tr>
+<tr class="odd">
+<td align="left">59</td>
+<td align="left">7</td>
+<td align="right">219</td>
+<td align="left">MIN</td>
+<td align="left">Stacy Coley</td>
+<td align="left">WR</td>
+<td align="right">23</td>
+<td align="right">2017</td>
+<td align="right">0.9584614</td>
+<td align="right">0.0415386</td>
+</tr>
+<tr class="even">
+<td align="left">6</td>
+<td align="left">1</td>
+<td align="right">9</td>
+<td align="left">CIN</td>
+<td align="left">John Ross</td>
+<td align="left">WR</td>
+<td align="right">22</td>
+<td align="right">2017</td>
+<td align="right">0.9297818</td>
+<td align="right">0.0702182</td>
+</tr>
+<tr class="odd">
+<td align="left">8</td>
+<td align="left">1</td>
+<td align="right">12</td>
+<td align="left">HOU</td>
+<td align="left">Deshaun Watson</td>
+<td align="left">QB</td>
+<td align="right">21</td>
+<td align="right">2017</td>
+<td align="right">0.9568783</td>
+<td align="right">0.0431217</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>top10_roty_2018 &lt;- test_df %&gt;%
+  filter(year == 2018) %&gt;%
+  top_n(10, Yes)
+
+kable(top10_roty_2018)</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Row.names</th>
+<th align="left">Rnd</th>
+<th align="right">Pick</th>
+<th align="left">Tm</th>
+<th align="left">Player</th>
+<th align="left">Pos</th>
+<th align="right">Age</th>
+<th align="right">year</th>
+<th align="right">No</th>
+<th align="right">Yes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">112</td>
+<td align="left">6</td>
+<td align="right">176</td>
+<td align="left">LAR</td>
+<td align="left">John Kelly</td>
+<td align="left">RB</td>
+<td align="right">21</td>
+<td align="right">2018</td>
+<td align="right">0.9608239</td>
+<td align="right">0.0391761</td>
+</tr>
+<tr class="even">
+<td align="left">137</td>
+<td align="left">7</td>
+<td align="right">256</td>
+<td align="left">WAS</td>
+<td align="left">Trey Quinn</td>
+<td align="left">WR</td>
+<td align="right">22</td>
+<td align="right">2018</td>
+<td align="right">0.9818866</td>
+<td align="right">0.0181134</td>
+</tr>
+<tr class="odd">
+<td align="left">70</td>
+<td align="left">1</td>
+<td align="right">1</td>
+<td align="left">CLE</td>
+<td align="left">Baker Mayfield</td>
+<td align="left">QB</td>
+<td align="right">23</td>
+<td align="right">2018</td>
+<td align="right">0.9729725</td>
+<td align="right">0.0270275</td>
+</tr>
+<tr class="even">
+<td align="left">71</td>
+<td align="left">1</td>
+<td align="right">2</td>
+<td align="left">NYG</td>
+<td align="left">Saquon Barkley</td>
+<td align="left">RB</td>
+<td align="right">21</td>
+<td align="right">2018</td>
+<td align="right">0.9203835</td>
+<td align="right">0.0796165</td>
+</tr>
+<tr class="odd">
+<td align="left">73</td>
+<td align="left">1</td>
+<td align="right">7</td>
+<td align="left">BUF</td>
+<td align="left">Josh Allen</td>
+<td align="left">QB</td>
+<td align="right">22</td>
+<td align="right">2018</td>
+<td align="right">0.9727702</td>
+<td align="right">0.0272298</td>
+</tr>
+<tr class="even">
+<td align="left">74</td>
+<td align="left">1</td>
+<td align="right">10</td>
+<td align="left">ARI</td>
+<td align="left">Josh Rosen</td>
+<td align="left">QB</td>
+<td align="right">21</td>
+<td align="right">2018</td>
+<td align="right">0.9333605</td>
+<td align="right">0.0666395</td>
+</tr>
+<tr class="odd">
+<td align="left">75</td>
+<td align="left">1</td>
+<td align="right">24</td>
+<td align="left">CAR</td>
+<td align="left">D.J. Moore</td>
+<td align="left">WR</td>
+<td align="right">21</td>
+<td align="right">2018</td>
+<td align="right">0.9818375</td>
+<td align="right">0.0181625</td>
+</tr>
+<tr class="even">
+<td align="left">78</td>
+<td align="left">1</td>
+<td align="right">31</td>
+<td align="left">NWE</td>
+<td align="left">Sony Michel</td>
+<td align="left">RB</td>
+<td align="right">23</td>
+<td align="right">2018</td>
+<td align="right">0.9825357</td>
+<td align="right">0.0174643</td>
+</tr>
+<tr class="odd">
+<td align="left">86</td>
+<td align="left">2</td>
+<td align="right">51</td>
+<td align="left">CHI</td>
+<td align="left">Anthony Miller</td>
+<td align="left">WR</td>
+<td align="right">23</td>
+<td align="right">2018</td>
+<td align="right">0.9818170</td>
+<td align="right">0.0181830</td>
+</tr>
+<tr class="even">
+<td align="left">87</td>
+<td align="left">2</td>
+<td align="right">59</td>
+<td align="left">WAS</td>
+<td align="left">Derrius Guice</td>
+<td align="left">RB</td>
+<td align="right">21</td>
+<td align="right">2018</td>
+<td align="right">0.9818866</td>
+<td align="right">0.0181134</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>top10_roty_2019 &lt;- test_df %&gt;%
+  filter(year == 2019) %&gt;%
+  top_n(10, Yes)
+
+kable(top10_roty_2019)</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Row.names</th>
+<th align="left">Rnd</th>
+<th align="right">Pick</th>
+<th align="left">Tm</th>
+<th align="left">Player</th>
+<th align="left">Pos</th>
+<th align="right">Age</th>
+<th align="right">year</th>
+<th align="right">No</th>
+<th align="right">Yes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">138</td>
+<td align="left">1</td>
+<td align="right">1</td>
+<td align="left">ARI</td>
+<td align="left">Kyler Murray</td>
+<td align="left">QB</td>
+<td align="right">22</td>
+<td align="right">2019</td>
+<td align="right">0.7976678</td>
+<td align="right">0.2023322</td>
+</tr>
+<tr class="even">
+<td align="left">139</td>
+<td align="left">1</td>
+<td align="right">6</td>
+<td align="left">NYG</td>
+<td align="left">Daniel Jones</td>
+<td align="left">QB</td>
+<td align="right">22</td>
+<td align="right">2019</td>
+<td align="right">0.9563732</td>
+<td align="right">0.0436268</td>
+</tr>
+<tr class="odd">
+<td align="left">140</td>
+<td align="left">1</td>
+<td align="right">15</td>
+<td align="left">WAS</td>
+<td align="left">Dwayne Haskins</td>
+<td align="left">QB</td>
+<td align="right">22</td>
+<td align="right">2019</td>
+<td align="right">0.9122622</td>
+<td align="right">0.0877378</td>
+</tr>
+<tr class="even">
+<td align="left">155</td>
+<td align="left">3</td>
+<td align="right">70</td>
+<td align="left">LAR</td>
+<td align="left">Darrell Henderson</td>
+<td align="left">RB</td>
+<td align="right">22</td>
+<td align="right">2019</td>
+<td align="right">0.9608239</td>
+<td align="right">0.0391761</td>
+</tr>
+<tr class="odd">
+<td align="left">158</td>
+<td align="left">3</td>
+<td align="right">76</td>
+<td align="left">WAS</td>
+<td align="left">Terry McLaurin</td>
+<td align="left">WR</td>
+<td align="right">23</td>
+<td align="right">2019</td>
+<td align="right">0.9818866</td>
+<td align="right">0.0181134</td>
+</tr>
+<tr class="even">
+<td align="left">162</td>
+<td align="left">3</td>
+<td align="right">102</td>
+<td align="left">MIN</td>
+<td align="left">Alexander Mattison</td>
+<td align="left">RB</td>
+<td align="right">21</td>
+<td align="right">2019</td>
+<td align="right">0.9584614</td>
+<td align="right">0.0415386</td>
+</tr>
+<tr class="odd">
+<td align="left">165</td>
+<td align="left">4</td>
+<td align="right">112</td>
+<td align="left">WAS</td>
+<td align="left">Bryce Love</td>
+<td align="left">RB</td>
+<td align="right">22</td>
+<td align="right">2019</td>
+<td align="right">0.9818866</td>
+<td align="right">0.0181134</td>
+</tr>
+<tr class="even">
+<td align="left">189</td>
+<td align="left">6</td>
+<td align="right">206</td>
+<td align="left">WAS</td>
+<td align="left">Kelvin Harmon</td>
+<td align="left">WR</td>
+<td align="right">22</td>
+<td align="right">2019</td>
+<td align="right">0.9818866</td>
+<td align="right">0.0181134</td>
+</tr>
+<tr class="odd">
+<td align="left">200</td>
+<td align="left">7</td>
+<td align="right">239</td>
+<td align="left">MIN</td>
+<td align="left">Dillon Mitchell</td>
+<td align="left">WR</td>
+<td align="right">22</td>
+<td align="right">2019</td>
+<td align="right">0.9584614</td>
+<td align="right">0.0415386</td>
+</tr>
+<tr class="even">
+<td align="left">201</td>
+<td align="left">7</td>
+<td align="right">247</td>
+<td align="left">MIN</td>
+<td align="left">Olabisi Johnson</td>
+<td align="left">WR</td>
+<td align="right">22</td>
+<td align="right">2019</td>
+<td align="right">0.9584614</td>
+<td align="right">0.0415386</td>
+</tr>
+</tbody>
+</table>
+<p>The actual winners for Rookie Offensive MVP for 2017-2019 were Alvin Kamara, Saquon Barkley, and Kyler Murray (in that order). The model fails to list Kamara as a top 10 prediction for 2017, but lists Barkley as its fourth best prediction for 2018, and Murray as its top prediction for 2019!</p>
+</div>
+<div id="predicting-the-2020-rookie-offensive-mvp" class="section level1">
+<h1>Predicting the 2020 Rookie Offensive MVP</h1>
+<p>Now let’s use the model to predict the probabilities that each player from the 2020 draft will become Offensive Rookie of the Year. Like we did for the testing portion, this code will give us the probability that the model is sure about its choice that the observation will fall under the “No” and “Yes” category.</p>
+<pre class="r"><code>predictions &lt;- predict(object=model, df_2020[,predictor_names], type='prob')</code></pre>
+<p>Now let’s join our prediction probabilities to the actual data like we did before. s</p>
 <pre class="r"><code>df_2020 &lt;- merge(df_2020, predictions, by = &quot;row.names&quot;, all.x = FALSE, all.y = FALSE)
-df_2020$No.x &lt;- NULL</code></pre>
+df_2020$No.x &lt;- NULL
+
+kable(head(df_2020))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Row.names</th>
+<th align="left">Rnd</th>
+<th align="right">Pick</th>
+<th align="left">Tm</th>
+<th align="left">Player</th>
+<th align="left">Pos</th>
+<th align="right">Age</th>
+<th align="right">year</th>
+<th align="right">No</th>
+<th align="right">Yes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="left">1</td>
+<td align="right">1</td>
+<td align="left">CIN</td>
+<td align="left">Joe Burrow</td>
+<td align="left">QB</td>
+<td align="right">23</td>
+<td align="right">2019</td>
+<td align="right">0.7884537</td>
+<td align="right">0.2115463</td>
+</tr>
+<tr class="even">
+<td align="left">10</td>
+<td align="left">1</td>
+<td align="right">26</td>
+<td align="left">GNB</td>
+<td align="left">Jordan Love</td>
+<td align="left">QB</td>
+<td align="right">21</td>
+<td align="right">2019</td>
+<td align="right">0.9866833</td>
+<td align="right">0.0133167</td>
+</tr>
+<tr class="odd">
+<td align="left">11</td>
+<td align="left">1</td>
+<td align="right">32</td>
+<td align="left">KAN</td>
+<td align="left">Clyde Edwards-Helaire</td>
+<td align="left">RB</td>
+<td align="right">21</td>
+<td align="right">2019</td>
+<td align="right">0.9985208</td>
+<td align="right">0.0014792</td>
+</tr>
+<tr class="even">
+<td align="left">12</td>
+<td align="left">2</td>
+<td align="right">33</td>
+<td align="left">CIN</td>
+<td align="left">Tee Higgins</td>
+<td align="left">WR</td>
+<td align="right">21</td>
+<td align="right">2019</td>
+<td align="right">0.9858937</td>
+<td align="right">0.0141063</td>
+</tr>
+<tr class="odd">
+<td align="left">13</td>
+<td align="left">2</td>
+<td align="right">34</td>
+<td align="left">IND</td>
+<td align="left">Michael Pittman Jr.</td>
+<td align="left">WR</td>
+<td align="right">22</td>
+<td align="right">2019</td>
+<td align="right">0.9985208</td>
+<td align="right">0.0014792</td>
+</tr>
+<tr class="even">
+<td align="left">14</td>
+<td align="left">2</td>
+<td align="right">35</td>
+<td align="left">DET</td>
+<td align="left">D’Andre Swift</td>
+<td align="left">RB</td>
+<td align="right">21</td>
+<td align="right">2019</td>
+<td align="right">0.9954382</td>
+<td align="right">0.0045618</td>
+</tr>
+</tbody>
+</table>
 <p>Now let’s get the top 10 players that the model is most certain will be the Offensive Rookie of the Year</p>
 <pre class="r"><code>top10_roty &lt;- df_2020 %&gt;%
   top_n(10, Yes)
@@ -1137,7 +1880,7 @@ kable(top10_roty)</code></pre>
 <td align="left">Joe Burrow</td>
 <td align="left">QB</td>
 <td align="right">23</td>
-<td align="right">2016</td>
+<td align="right">2019</td>
 <td align="right">0.7884537</td>
 <td align="right">0.2115463</td>
 </tr>
@@ -1149,7 +1892,7 @@ kable(top10_roty)</code></pre>
 <td align="left">Cam Akers</td>
 <td align="left">RB</td>
 <td align="right">21</td>
-<td align="right">2016</td>
+<td align="right">2019</td>
 <td align="right">0.9551433</td>
 <td align="right">0.0448567</td>
 </tr>
@@ -1161,7 +1904,7 @@ kable(top10_roty)</code></pre>
 <td align="left">Tua Tagovailoa</td>
 <td align="left">QB</td>
 <td align="right">22</td>
-<td align="right">2016</td>
+<td align="right">2019</td>
 <td align="right">0.9124603</td>
 <td align="right">0.0875397</td>
 </tr>
@@ -1173,7 +1916,7 @@ kable(top10_roty)</code></pre>
 <td align="left">Van Jefferson</td>
 <td align="left">WR</td>
 <td align="right">24</td>
-<td align="right">2016</td>
+<td align="right">2019</td>
 <td align="right">0.9551433</td>
 <td align="right">0.0448567</td>
 </tr>
@@ -1185,7 +1928,7 @@ kable(top10_roty)</code></pre>
 <td align="left">Henry Ruggs III</td>
 <td align="left">WR</td>
 <td align="right">21</td>
-<td align="right">2016</td>
+<td align="right">2019</td>
 <td align="right">0.9651014</td>
 <td align="right">0.0348986</td>
 </tr>
@@ -1197,7 +1940,7 @@ kable(top10_roty)</code></pre>
 <td align="left">K.J. Osborn</td>
 <td align="left">WR</td>
 <td align="right">NA</td>
-<td align="right">2016</td>
+<td align="right">2019</td>
 <td align="right">0.9584614</td>
 <td align="right">0.0415386</td>
 </tr>
@@ -1209,7 +1952,7 @@ kable(top10_roty)</code></pre>
 <td align="left">Jerry Jeudy</td>
 <td align="left">WR</td>
 <td align="right">21</td>
-<td align="right">2016</td>
+<td align="right">2019</td>
 <td align="right">0.9377729</td>
 <td align="right">0.0622271</td>
 </tr>
@@ -1221,7 +1964,7 @@ kable(top10_roty)</code></pre>
 <td align="left">CeeDee Lamb</td>
 <td align="left">WR</td>
 <td align="right">21</td>
-<td align="right">2016</td>
+<td align="right">2019</td>
 <td align="right">0.9482607</td>
 <td align="right">0.0517393</td>
 </tr>
@@ -1233,7 +1976,7 @@ kable(top10_roty)</code></pre>
 <td align="left">Nate Stanley</td>
 <td align="left">QB</td>
 <td align="right">NA</td>
-<td align="right">2016</td>
+<td align="right">2019</td>
 <td align="right">0.9584614</td>
 <td align="right">0.0415386</td>
 </tr>
@@ -1245,7 +1988,7 @@ kable(top10_roty)</code></pre>
 <td align="left">Justin Jefferson</td>
 <td align="left">WR</td>
 <td align="right">21</td>
-<td align="right">2016</td>
+<td align="right">2019</td>
 <td align="right">0.9311832</td>
 <td align="right">0.0688168</td>
 </tr>

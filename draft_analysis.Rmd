@@ -29,7 +29,7 @@ The result will be stored in the dataframe *master_df* with entities for each pl
 
 Note: We will also do some process in this step as well, but we will go into more detail on that when we repeat the processing steps in another dataframe later in the walkthrough.
     
-```{r scraping}
+```{r scrape_master}
 
 master_df <- data.frame()
 for (year in 1970:2016){
@@ -64,14 +64,13 @@ for (year in 1970:2016){
   df <- df %>%
     mutate(year = year)
     
-
   master_df <- rbind(master_df, df)
 }
 ```
 
 We will also scrape the data from the 2020 draft in the same way for use in our machine learning problem and save it to our *df_2020* variable. 
 
-```{r scrape2020}
+```{r scrape_2020}
 
 draft_url <- "https://www.pro-football-reference.com/years/2020/draft.htm"
 draft_html <- read_html(draft_url)
@@ -84,7 +83,35 @@ names(df_2020) <- as.character(unlist(df_2020[1,]))
 df_2020 <- df_2020[-1,]
 ```
 
-Next we will scrape the AP Offensive Rookie of the Year Winners from the same website.
+We will also scrape the 2017-2019 NFL draft data into a seperate dataframe *test_df*, which will be used to test our machine learning model that we will develop later in the tutorial.
+
+```{r scrape_test}
+test_df <- data.frame()
+for (year in 2017:2019){
+  
+  draft_url <- paste("https://www.pro-football-reference.com/years/", year, "/draft.htm", sep="")
+  draft_html <- read_html(draft_url)
+
+  df <- draft_html %>%
+    html_node("table") %>%
+    html_table()
+
+  names(df) <- as.character(unlist(df[1,]))
+  df <- df[-1,]
+  
+  # get rid of the columns we dont care about
+  df <- df[,1:6]
+  
+  # add year drafted to each observation
+  df <- df %>%
+    mutate(year = year)
+
+  test_df <- rbind(test_df, df)
+}
+
+```
+
+Next we will scrape the AP Offensive Rookie of the Year Winners from the same website, again for our machine learning problem.
 
 ```{r scrape_ROTY}
 
@@ -178,6 +205,31 @@ kable(head(df_2020))
 ```
 
 So, now our *df_2020* dataframe contains only the offensive skill position players that were drafted in 2020 as entities. The variables of this dataframe are **Rnd**, **Pick**, **Tm**, **Player**, **Pos**, **Age**, and **Year** like we have in our *master_df* variable.
+
+We will process the *test_df* dataframe in the same way.
+
+```{r process_test}
+
+# filter out certain rounds
+test_df <- test_df %>%
+  filter(Rnd < 8)
+  
+# get rid of blank rows
+test_df <-test_df[!(test_df$Player=="Player"),]
+  
+# filter so dataframe only contains offensive skill position players.
+test_df <- test_df %>%
+  filter(Pos == "QB" | Pos == "WR" | Pos == "RB")
+
+test_df[is.na(test_df)] <- 22
+
+test_df$Pick <- as.integer(test_df$Pick)
+test_df$Age <- as.integer(test_df$Age)
+test_df$Tm <- as.factor(test_df$Tm)
+test_df$Pos <- as.factor(test_df$Pos)
+
+kable(head(test_df))
+```
 
 Now let's create a dataframe in which we can compare different positions that were drafted. First, we want to break up our data into 4 periods. Then for each period, we will take average career value of each position grouped by each round that the player was selected. We will make a new *pos_df* dataframe with these groupings.
 
@@ -414,24 +466,67 @@ What is even more interesting is that the team the player was drafted to seemed 
 
 # Testing against 2017-2019 data
 
+Let's test our model against the 2017, 2018, and 2019 datasets. To do this, we will use the *predict()* function in the caret package and feed it the test data. From there,  *predict()* will calculate probabilities that the model is sure about it choice that each observation from *test_df* will fall under the "Yes" and "No" outcome categories. So the "Yes" variable corresponds to the probability the model is sure about its choice that the player will become Rookie MVP, and "No" = probability the model is sure the player will not be the Rookie MVP.
 
+```{r eval_test}
 
-# Predicting the 2020 Rookie Offensive MVP
-
-Now let's use the model to predict the probabilities that each player from the 2020 draft will become Offensive Rookie of the Year.  This code will give us the probability that the model is sure about its choice that the observation will fall under the "No" and "Yes" category.
-
-```{r eval}
-
-predictions <- predict(object=model, df_2020[,predictor_names], type='prob')
+predictions <- predict(object=model, test_df[,predictor_names], type='prob')
 kable(head(predictions))
 ```
 
 Now let's join our prediction probabilities to the actual data, so we can look at the prediction probabilities for each player.
 
+```{r join_probabilities_test}
+
+test_df <- merge(test_df, predictions, by = "row.names", all.x = FALSE, all.y = FALSE)
+test_df$No.x <- NULL
+
+kable(head(test_df))
+```
+
+Now let's get the top 10 players that the model is most certain will be the Offensive Rookie of the Year for 2017, 2018, and 2019.
+
+```{r top10_roty_test}
+
+top10_roty_2017 <- test_df %>%
+  filter(year == 2017) %>%
+  top_n(10, Yes)
+
+kable(top10_roty_2017)
+
+top10_roty_2018 <- test_df %>%
+  filter(year == 2018) %>%
+  top_n(10, Yes)
+
+kable(top10_roty_2018)
+
+top10_roty_2019 <- test_df %>%
+  filter(year == 2019) %>%
+  top_n(10, Yes)
+
+kable(top10_roty_2019)
+```
+
+
+The actual winners for Rookie Offensive MVP for 2017-2019 were Alvin Kamara, Saquon Barkley, and Kyler Murray (in that order). The model fails to list Kamara as a top 10 prediction for 2017, but lists Barkley as its fourth best prediction for 2018, and Murray as its top prediction for 2019!
+
+# Predicting the 2020 Rookie Offensive MVP
+
+Now let's use the model to predict the probabilities that each player from the 2020 draft will become Offensive Rookie of the Year.  Like we did for the testing portion, this code will give us the probability that the model is sure about its choice that the observation will fall under the "No" and "Yes" category.
+
+```{r eval_2020}
+
+predictions <- predict(object=model, df_2020[,predictor_names], type='prob')
+```
+
+Now let's join our prediction probabilities to the actual data like we did before. s
+
 ```{r join_probabilities}
 
 df_2020 <- merge(df_2020, predictions, by = "row.names", all.x = FALSE, all.y = FALSE)
 df_2020$No.x <- NULL
+
+kable(head(df_2020))
 ```
 
 Now let's get the top 10 players that the model is most certain will be the Offensive Rookie of the Year
