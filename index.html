@@ -187,6 +187,8 @@ summary {
 <div id="part-1-data-collection" class="section level1">
 <h1>Part 1: Data Collection</h1>
 <p>We will scrape historical draft data from Pro-Football Reference from years 1970 till 2016. We chose to stop at 2016 since rookies usually sign 4 year deals, so the four year mark is typically when each team will finish evaulating each player they drafted, and make a decision on whether or not to resign the player. So, the jury is still out on players drafted after 2016. We will filter out any selections after round 7, as since 1994, the NFL draft has only consisted of 7 rounds.</p>
+<p>The result will be stored in the dataframe <em>master_df</em> with entities for each player.</p>
+<p>Note: We will also do some process in this step as well, but we will go into more detail on that when we repeat the processing steps in another dataframe later in the walkthrough.</p>
 <pre class="r"><code>master_df &lt;- data.frame()
 for (year in 1970:2016){
   
@@ -223,7 +225,7 @@ for (year in 1970:2016){
 
   master_df &lt;- rbind(master_df, df)
 }</code></pre>
-<p>We will also scrape the data from the 2020 draft for use in our machine learning problem and save it to our df variable.</p>
+<p>We will also scrape the data from the 2020 draft in the same way for use in our machine learning problem and save it to our <em>df_2020</em> variable.</p>
 <pre class="r"><code>draft_url &lt;- &quot;https://www.pro-football-reference.com/years/2020/draft.htm&quot;
 draft_html &lt;- read_html(draft_url)
 
@@ -243,15 +245,7 @@ roty_df &lt;- draft_html %&gt;%
 </div>
 <div id="part-2-data-processing-and-preparation" class="section level1">
 <h1>Part 2: Data Processing and Preparation</h1>
-<p>Load the NFL draft history data, containing the draft data from rounds 1-7 from the 1970-2016 NFL draft. Remove all of the missing data entries, and convert the necessary columns to integers.</p>
-<pre class="r"><code>head(master_df)</code></pre>
-<pre><code>##   Rnd Pick  Tm             Player Pos Age   To AP1 PB St CarAV DrAV   G year
-## 1   1    1 PIT Terry Bradshaw HOF  QB  22 1983   1  3 13   106  106 168 1970
-## 2   1    2 GNB         Mike McCoy  DT  22 1980   0  0  7    46   40 132 1970
-## 3   1    3 CLE        Mike Phipps  QB  22 1981   0  0  5    40   32 119 1970
-## 4   1    4 BOS         Phil Olsen  DT  22 1976   0  0  1    19   NA  79 1970
-## 5   1    5 BUF        Al Cowlings  DE  23 1979   0  0  5    29   11 101 1970
-## 6   1    6 PHI        Steve Zabel  LB  22 1979   0  0  7    38   17 124 1970</code></pre>
+<p>Load the NFL draft history data from <em>master_df</em>, containing the draft data from rounds 1-7 from the 1970-2016 NFL draft. Remove all of the missing data entries, and convert the necessary columns to integers.</p>
 <pre class="r"><code>master_df &lt;- master_df[complete.cases(master_df[,12:13]),]
 master_df$Rnd &lt;- as.factor(master_df$Rnd)
 master_df$Tm &lt;- as.factor(master_df$Tm)
@@ -261,8 +255,165 @@ master_df$Age &lt;- as.integer(master_df$Age)
 master_df$CarAV &lt;- as.integer(master_df$CarAV)
 master_df$DrAV &lt;- as.integer(master_df$DrAV)
 master_df$G &lt;- as.integer(master_df$G)
-master_df$Pick &lt;- as.integer(master_df$Pick)</code></pre>
-<p>Now let’s process our 2020 Draft data. First, we will get rid of columns we don’t care about, then remove blank rows, add year drafted to each observation, and convert the necessary columns to integers, all like we did for the historical draft dataset. We will also filter the data to only include quarterbacks, wide receivers, and running backs.</p>
+master_df$Pick &lt;- as.integer(master_df$Pick)
+
+kable(head(master_df))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th></th>
+<th align="left">Rnd</th>
+<th align="right">Pick</th>
+<th align="left">Tm</th>
+<th align="left">Player</th>
+<th align="left">Pos</th>
+<th align="right">Age</th>
+<th align="left">To</th>
+<th align="left">AP1</th>
+<th align="left">PB</th>
+<th align="left">St</th>
+<th align="right">CarAV</th>
+<th align="right">DrAV</th>
+<th align="right">G</th>
+<th align="right">year</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td align="left">1</td>
+<td align="right">1</td>
+<td align="left">PIT</td>
+<td align="left">Terry Bradshaw HOF</td>
+<td align="left">QB</td>
+<td align="right">22</td>
+<td align="left">1983</td>
+<td align="left">1</td>
+<td align="left">3</td>
+<td align="left">13</td>
+<td align="right">106</td>
+<td align="right">106</td>
+<td align="right">168</td>
+<td align="right">1970</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td align="left">1</td>
+<td align="right">2</td>
+<td align="left">GNB</td>
+<td align="left">Mike McCoy</td>
+<td align="left">DT</td>
+<td align="right">22</td>
+<td align="left">1980</td>
+<td align="left">0</td>
+<td align="left">0</td>
+<td align="left">7</td>
+<td align="right">46</td>
+<td align="right">40</td>
+<td align="right">132</td>
+<td align="right">1970</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td align="left">1</td>
+<td align="right">3</td>
+<td align="left">CLE</td>
+<td align="left">Mike Phipps</td>
+<td align="left">QB</td>
+<td align="right">22</td>
+<td align="left">1981</td>
+<td align="left">0</td>
+<td align="left">0</td>
+<td align="left">5</td>
+<td align="right">40</td>
+<td align="right">32</td>
+<td align="right">119</td>
+<td align="right">1970</td>
+</tr>
+<tr class="even">
+<td>5</td>
+<td align="left">1</td>
+<td align="right">5</td>
+<td align="left">BUF</td>
+<td align="left">Al Cowlings</td>
+<td align="left">DE</td>
+<td align="right">23</td>
+<td align="left">1979</td>
+<td align="left">0</td>
+<td align="left">0</td>
+<td align="left">5</td>
+<td align="right">29</td>
+<td align="right">11</td>
+<td align="right">101</td>
+<td align="right">1970</td>
+</tr>
+<tr class="odd">
+<td>6</td>
+<td align="left">1</td>
+<td align="right">6</td>
+<td align="left">PHI</td>
+<td align="left">Steve Zabel</td>
+<td align="left">LB</td>
+<td align="right">22</td>
+<td align="left">1979</td>
+<td align="left">0</td>
+<td align="left">0</td>
+<td align="left">7</td>
+<td align="right">38</td>
+<td align="right">17</td>
+<td align="right">124</td>
+<td align="right">1970</td>
+</tr>
+<tr class="even">
+<td>7</td>
+<td align="left">1</td>
+<td align="right">7</td>
+<td align="left">CIN</td>
+<td align="left">Mike Reid</td>
+<td align="left">DT</td>
+<td align="right">23</td>
+<td align="left">1974</td>
+<td align="left">1</td>
+<td align="left">2</td>
+<td align="left">5</td>
+<td align="right">36</td>
+<td align="right">36</td>
+<td align="right">64</td>
+<td align="right">1970</td>
+</tr>
+</tbody>
+</table>
+<p>Our <em>master_df</em> dataframe now has entities for each player with the following variables:</p>
+<pre><code>Rnd : Round in which the player was selected
+
+Pick: Overall selection in draft
+
+Tm  : Team
+
+Player: Player name
+
+Pos : Position
+
+Age
+
+To: Last year in the league
+
+AP1: First team All-Pro selections
+
+PB: Pro Bowl selections
+
+St: Number of years as primary starter for his team at his position
+
+CarAv: Weighted Career Approximate Value
+
+              = 100% of AV of his best season + 95% of AV of his next best season + 90% of AV of his third-best season + ...
+              
+DrAV: Average value accumulated for the team that drafted this player
+
+G : Games Played
+
+year: Year drafted</code></pre>
+<p>Now let’s process our 2020 Draft data. First, we will get rid of columns we don’t care about, then remove blank rows, add year drafted to each observation, and convert the necessary columns to integers, all like we did for the historical draft dataset. We will also filter this dataframe to only include quarterbacks, wide receivers, and running backs.</p>
 <pre class="r"><code># get rid of the columns we dont care about
 df_2020 &lt;- df_2020[,1:6]
 
@@ -283,35 +434,272 @@ df_2020[is.na(df_2020)] &lt;- 22
 df_2020$Pick &lt;- as.integer(df_2020$Pick)
 df_2020$Age &lt;- as.integer(df_2020$Age)
 df_2020$Tm &lt;- as.factor(df_2020$Tm)
-df_2020$Pos &lt;- as.factor(df_2020$Pos)</code></pre>
-<p>Now let’s create a dataframe in which we can compare different positions that were drafted. First, we want to break up our data into 4 periods. Then for each period, we will take average career value of each position grouped by each round that the player was selected. We will make a new pos_df dataframe with these groupings.</p>
+df_2020$Pos &lt;- as.factor(df_2020$Pos)
+
+kable(head(df_2020))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Rnd</th>
+<th align="right">Pick</th>
+<th align="left">Tm</th>
+<th align="left">Player</th>
+<th align="left">Pos</th>
+<th align="right">Age</th>
+<th align="right">year</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="right">1</td>
+<td align="left">CIN</td>
+<td align="left">Joe Burrow</td>
+<td align="left">QB</td>
+<td align="right">23</td>
+<td align="right">2016</td>
+</tr>
+<tr class="even">
+<td align="left">1</td>
+<td align="right">5</td>
+<td align="left">MIA</td>
+<td align="left">Tua Tagovailoa</td>
+<td align="left">QB</td>
+<td align="right">22</td>
+<td align="right">2016</td>
+</tr>
+<tr class="odd">
+<td align="left">1</td>
+<td align="right">6</td>
+<td align="left">LAC</td>
+<td align="left">Justin Herbert</td>
+<td align="left">QB</td>
+<td align="right">22</td>
+<td align="right">2016</td>
+</tr>
+<tr class="even">
+<td align="left">1</td>
+<td align="right">12</td>
+<td align="left">VEG</td>
+<td align="left">Henry Ruggs III</td>
+<td align="left">WR</td>
+<td align="right">21</td>
+<td align="right">2016</td>
+</tr>
+<tr class="odd">
+<td align="left">1</td>
+<td align="right">15</td>
+<td align="left">DEN</td>
+<td align="left">Jerry Jeudy</td>
+<td align="left">WR</td>
+<td align="right">21</td>
+<td align="right">2016</td>
+</tr>
+<tr class="even">
+<td align="left">1</td>
+<td align="right">17</td>
+<td align="left">DAL</td>
+<td align="left">CeeDee Lamb</td>
+<td align="left">WR</td>
+<td align="right">21</td>
+<td align="right">2016</td>
+</tr>
+</tbody>
+</table>
+<p>So, now our <em>df_2020</em> dataframe contains only the offensive skill position players that were drafted in 2020 as entities. The variables of this dataframe are <strong>Rnd</strong>, <strong>Pick</strong>, <strong>Tm</strong>, <strong>Player</strong>, <strong>Pos</strong>, <strong>Age</strong>, and <strong>Year</strong> like we have in our <em>master_df</em> variable.</p>
+<p>Now let’s create a dataframe in which we can compare different positions that were drafted. First, we want to break up our data into 4 periods. Then for each period, we will take average career value of each position grouped by each round that the player was selected. We will make a new <em>pos_df</em> dataframe with these groupings.</p>
 <pre class="r"><code>pos_df &lt;- master_df %&gt;%
   mutate(period = cut(year, breaks=4)) %&gt;%
   group_by(period, Pos, Rnd) %&gt;%
   summarise(Avg_AV = mean(CarAV))
 
-head(pos_df)</code></pre>
-<pre><code>## # A tibble: 6 x 4
-## # Groups:   period, Pos [1]
-##   period              Pos   Rnd   Avg_AV
-##   &lt;fct&gt;               &lt;fct&gt; &lt;fct&gt;  &lt;dbl&gt;
-## 1 (1.97e+03,1.98e+03] C     1       32  
-## 2 (1.97e+03,1.98e+03] C     2       50.3
-## 3 (1.97e+03,1.98e+03] C     3       12.5
-## 4 (1.97e+03,1.98e+03] C     4       42  
-## 5 (1.97e+03,1.98e+03] C     5       26.1
-## 6 (1.97e+03,1.98e+03] C     6       21.6</code></pre>
-<p>Let’s also add a dataframe that contains a variable that is TRUE when the player that was drafted was Offensive Rookie of the Year, and FALSE otherwise. We will also filter out all of the defensive players in this new dataframe.</p>
+kable(head(pos_df))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">period</th>
+<th align="left">Pos</th>
+<th align="left">Rnd</th>
+<th align="right">Avg_AV</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">(1.97e+03,1.98e+03]</td>
+<td align="left">C</td>
+<td align="left">1</td>
+<td align="right">32.00000</td>
+</tr>
+<tr class="even">
+<td align="left">(1.97e+03,1.98e+03]</td>
+<td align="left">C</td>
+<td align="left">2</td>
+<td align="right">50.28571</td>
+</tr>
+<tr class="odd">
+<td align="left">(1.97e+03,1.98e+03]</td>
+<td align="left">C</td>
+<td align="left">3</td>
+<td align="right">12.50000</td>
+</tr>
+<tr class="even">
+<td align="left">(1.97e+03,1.98e+03]</td>
+<td align="left">C</td>
+<td align="left">4</td>
+<td align="right">42.00000</td>
+</tr>
+<tr class="odd">
+<td align="left">(1.97e+03,1.98e+03]</td>
+<td align="left">C</td>
+<td align="left">5</td>
+<td align="right">26.08333</td>
+</tr>
+<tr class="even">
+<td align="left">(1.97e+03,1.98e+03]</td>
+<td align="left">C</td>
+<td align="left">6</td>
+<td align="right">21.60000</td>
+</tr>
+</tbody>
+</table>
+<p>Let’s also add a dataframe <em>off_df</em> that is the same as <em>master_df</em>, but contains a variable <strong>roty</strong> that is Yes when the player that was drafted from 1970-2016 was Offensive Rookie of the Year, and No otherwise. We will also filter the dataframe to only contain offensive skill position players, like we did for the 2020 draft data.</p>
 <pre class="r"><code>off_df &lt;- master_df %&gt;%
   mutate(roty = ifelse(Player %in% roty_df$Player, &quot;Yes&quot;, &quot;No&quot;)) %&gt;%
   filter(Pos == &quot;QB&quot; | Pos == &quot;WR&quot; | Pos == &quot;RB&quot;)
 
-off_df$roty &lt;- as.factor(off_df$roty)</code></pre>
+off_df$roty &lt;- as.factor(off_df$roty)
+
+kable(head(off_df))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Rnd</th>
+<th align="right">Pick</th>
+<th align="left">Tm</th>
+<th align="left">Player</th>
+<th align="left">Pos</th>
+<th align="right">Age</th>
+<th align="left">To</th>
+<th align="left">AP1</th>
+<th align="left">PB</th>
+<th align="left">St</th>
+<th align="right">CarAV</th>
+<th align="right">DrAV</th>
+<th align="right">G</th>
+<th align="right">year</th>
+<th align="left">roty</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="right">1</td>
+<td align="left">PIT</td>
+<td align="left">Terry Bradshaw HOF</td>
+<td align="left">QB</td>
+<td align="right">22</td>
+<td align="left">1983</td>
+<td align="left">1</td>
+<td align="left">3</td>
+<td align="left">13</td>
+<td align="right">106</td>
+<td align="right">106</td>
+<td align="right">168</td>
+<td align="right">1970</td>
+<td align="left">No</td>
+</tr>
+<tr class="even">
+<td align="left">1</td>
+<td align="right">3</td>
+<td align="left">CLE</td>
+<td align="left">Mike Phipps</td>
+<td align="left">QB</td>
+<td align="right">22</td>
+<td align="left">1981</td>
+<td align="left">0</td>
+<td align="left">0</td>
+<td align="left">5</td>
+<td align="right">40</td>
+<td align="right">32</td>
+<td align="right">119</td>
+<td align="right">1970</td>
+<td align="left">No</td>
+</tr>
+<tr class="odd">
+<td align="left">1</td>
+<td align="right">8</td>
+<td align="left">STL</td>
+<td align="left">Larry Stegent</td>
+<td align="left">RB</td>
+<td align="right">22</td>
+<td align="left">1971</td>
+<td align="left">0</td>
+<td align="left">0</td>
+<td align="left">0</td>
+<td align="right">0</td>
+<td align="right">0</td>
+<td align="right">7</td>
+<td align="right">1970</td>
+<td align="left">No</td>
+</tr>
+<tr class="even">
+<td align="left">1</td>
+<td align="right">10</td>
+<td align="left">NOR</td>
+<td align="left">Ken Burrough</td>
+<td align="left">WR</td>
+<td align="right">22</td>
+<td align="left">1981</td>
+<td align="left">0</td>
+<td align="left">2</td>
+<td align="left">9</td>
+<td align="right">66</td>
+<td align="right">1</td>
+<td align="right">156</td>
+<td align="right">1970</td>
+<td align="left">No</td>
+</tr>
+<tr class="odd">
+<td align="left">1</td>
+<td align="right">11</td>
+<td align="left">DEN</td>
+<td align="left">Bobby Anderson</td>
+<td align="left">RB</td>
+<td align="right">22</td>
+<td align="left">1975</td>
+<td align="left">0</td>
+<td align="left">0</td>
+<td align="left">2</td>
+<td align="right">20</td>
+<td align="right">20</td>
+<td align="right">54</td>
+<td align="right">1970</td>
+<td align="left">No</td>
+</tr>
+<tr class="even">
+<td align="left">1</td>
+<td align="right">15</td>
+<td align="left">SDG</td>
+<td align="left">Walker Gillette</td>
+<td align="left">WR</td>
+<td align="right">23</td>
+<td align="left">1976</td>
+<td align="left">0</td>
+<td align="left">0</td>
+<td align="left">4</td>
+<td align="right">21</td>
+<td align="right">2</td>
+<td align="right">91</td>
+<td align="right">1970</td>
+<td align="left">No</td>
+</tr>
+</tbody>
+</table>
 </div>
 <div id="part-3-exploratory-data-analysis" class="section level1">
 <h1>Part 3: Exploratory Data Analysis</h1>
 <div id="trends-in-average-value" class="section level2">
-<h2>Trends in Average value</h2>
+<h2>Trends in Average Value</h2>
 <p>Has average value for players selected in different rounds gone up over time? Have GMs gotten better at drafting in the first round, second round, etc…?</p>
 <pre class="r"><code>avg_val_df &lt;- master_df %&gt;%
   group_by(year, Rnd) %&gt;%
@@ -328,7 +716,7 @@ avg_val_df %&gt;%
 <p>Seems like GMs have not gotten better at drafting in any of the first four rounds. In fact, we see a slight decline in average value for all rounds over time. We do see that GMs are selecting better players in the earlier rounds, as generally the average value for the earlier rounds is consistently higher than the lower rounds throughout the years. We see the trends spread out as time goes on as well.</p>
 </div>
 <div id="analyzing-the-quarterback-position" class="section level2">
-<h2>Analyzing the Quarterback position</h2>
+<h2>Analyzing the Quarterback Position</h2>
 <p>Lets analyze the average values of different positions grouped by round and time period in which they were drafted. Let’s start with the most important position in football.</p>
 <pre class="r"><code>qb_bar &lt;- pos_df %&gt;%
   filter(Pos == &quot;QB&quot;) %&gt;%
@@ -368,8 +756,8 @@ qb_violin</code></pre>
 <p>As we would expect, the violin plots show us that most of the QBs selected in rounds 5-7 turn out to be busts, as most of the career values end up towards the bottom of the violin.</p>
 <p>However, the distributions reaffirm what we have seen before in our Round 1 QBs. The spread of the data is far greater in round 1, and decreases heavily in round 2, and from there the decreases in spread are less drastic, suggesting that you have more of a shot at getting a good player in round 1 than in any other round.</p>
 </div>
-<div id="analyzing-the-wr-and-rb-positions" class="section level2">
-<h2>Analyzing the WR and RB positions</h2>
+<div id="analyzing-the-wr-and-rb" class="section level2">
+<h2>Analyzing the WR and RB</h2>
 <p>Next we will provide the same graphs to provide similar insight into the RB and WR selections of the draft.</p>
 <p>It is interesting to note that the general trend has been to select RBs later in the draft, as RBs have always been considered as more expendable than a QB, and there seems to be a notion that you can always get a quality back in the later rounds, and that using first round capital on a RB is a poor management decision.</p>
 <pre class="r"><code>rb_bar &lt;- pos_df %&gt;%
@@ -453,25 +841,19 @@ grid.arrange(qb_violin, rb_violin, wr_violin, ncol=3, top = &quot;Average Value 
 <h1>Part 4: Machine Learning</h1>
 <div id="predicting-the-rookie-offensive-mvp" class="section level2">
 <h2>Predicting the Rookie Offensive MVP</h2>
-<p>Now, right off the bat, we hope that the model will predict that Joe Burrow has a higher likelihood of winning the MVP. Not only because he’s a stud, but because he’s fresh off the Heisman, and the first overall pick QB that is going to a team in desperate need of good QB play. Vegas has him as the clear favorite to win, and the season is set up for him to take the title, so if our model is worth anything</p>
-<p>First, lets control the resampling of our data. In this case, we’re going to cross-validate the data 3 times, therefore training it 3 times on different portions of the data before settling on the best tuning parameters (for gbm it is trees, shrinkage, and interaction depth).</p>
-<pre class="r"><code>library(caret)</code></pre>
-<pre><code>## Loading required package: lattice</code></pre>
-<pre><code>## 
-## Attaching package: 'caret'</code></pre>
-<pre><code>## The following object is masked from 'package:purrr':
-## 
-##     lift</code></pre>
-<pre class="r"><code>outcome_name &lt;- 'roty'
-predictor_names &lt;- c('Tm', 'Pos', 'Pick')
-
-objControl &lt;- trainControl(method='cv', number=3, returnResamp='none', summaryFunction = twoClassSummary, classProbs = TRUE)</code></pre>
+<p>Now, right off the bat, we hope that the model will predict that Joe Burrow has a higher likelihood of winning the MVP. Not only because he’s a stud, but because he’s fresh off the Heisman, and the first overall pick QB that is going to a team in desperate need of good QB play. Vegas has him as the clear favorite to win, and the season is set up for him to take the title, so if our model is worth anything, it should at the very least have Joe Burrow as one of its top predictions for the award.</p>
+<p>First, lets control the resampling of our data. In this case, we’re going to cross-validate the data 3 times, therefore training the model 3 times on different portions of the data before settling on the best tuning parameters. For gbm, the tuning parameters are trees, shrinkage, and interaction depth.</p>
+<pre class="r"><code>objControl &lt;- trainControl(method='cv', number=3, returnResamp='none', summaryFunction = twoClassSummary, classProbs = TRUE)</code></pre>
 </div>
 </div>
 <div id="creating-our-model" class="section level1">
 <h1>Creating our Model</h1>
 <p>Now to actually train the model…</p>
-<pre class="r"><code>set.seed(123)
+<p>First, we will set the predictor variables to <strong>Tm</strong>, <strong>Pos</strong>, and <strong>Pick</strong>, and the sole outcome variable as <strong>roty</strong>. Then we will use the <em>train()</em> method from the caret package to train the model using the <em>off_df</em> variable that contains all our historical draft data on all the offensive skill position players.</p>
+<pre class="r"><code>outcome_name &lt;- 'roty'
+predictor_names &lt;- c('Tm', 'Pos', 'Pick')
+
+set.seed(123)
 model &lt;- train(off_df[,predictor_names], off_df[,outcome_name], 
                method = &quot;gbm&quot;,
                trControl = objControl,
@@ -671,14 +1053,15 @@ model &lt;- train(off_df[,predictor_names], off_df[,outcome_name],
 ##     20        0.1438             nan     0.1000   -0.0002
 ##     40        0.1378             nan     0.1000   -0.0011
 ##     50        0.1369             nan     0.1000   -0.0002</code></pre>
+<p>We will print the summary of the model below, which will display the relative influences of each of the predictor variables.</p>
 <pre class="r"><code>summary(model)</code></pre>
 <p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABUAAAAPACAYAAAD0ZtPZAAAEGWlDQ1BrQ0dDb2xvclNwYWNlR2VuZXJpY1JHQgAAOI2NVV1oHFUUPrtzZyMkzlNsNIV0qD8NJQ2TVjShtLp/3d02bpZJNtoi6GT27s6Yyc44M7v9oU9FUHwx6psUxL+3gCAo9Q/bPrQvlQol2tQgKD60+INQ6Ium65k7M5lpurHeZe58853vnnvuuWfvBei5qliWkRQBFpquLRcy4nOHj4g9K5CEh6AXBqFXUR0rXalMAjZPC3e1W99Dwntf2dXd/p+tt0YdFSBxH2Kz5qgLiI8B8KdVy3YBevqRHz/qWh72Yui3MUDEL3q44WPXw3M+fo1pZuQs4tOIBVVTaoiXEI/MxfhGDPsxsNZfoE1q66ro5aJim3XdoLFw72H+n23BaIXzbcOnz5mfPoTvYVz7KzUl5+FRxEuqkp9G/Ajia219thzg25abkRE/BpDc3pqvphHvRFys2weqvp+krbWKIX7nhDbzLOItiM8358pTwdirqpPFnMF2xLc1WvLyOwTAibpbmvHHcvttU57y5+XqNZrLe3lE/Pq8eUj2fXKfOe3pfOjzhJYtB/yll5SDFcSDiH+hRkH25+L+sdxKEAMZahrlSX8ukqMOWy/jXW2m6M9LDBc31B9LFuv6gVKg/0Szi3KAr1kGq1GMjU/aLbnq6/lRxc4XfJ98hTargX++DbMJBSiYMIe9Ck1YAxFkKEAG3xbYaKmDDgYyFK0UGYpfoWYXG+fAPPI6tJnNwb7ClP7IyF+D+bjOtCpkhz6CFrIa/I6sFtNl8auFXGMTP34sNwI/JhkgEtmDz14ySfaRcTIBInmKPE32kxyyE2Tv+thKbEVePDfW/byMM1Kmm0XdObS7oGD/MypMXFPXrCwOtoYjyyn7BV29/MZfsVzpLDdRtuIZnbpXzvlf+ev8MvYr/Gqk4H/kV/G3csdazLuyTMPsbFhzd1UabQbjFvDRmcWJxR3zcfHkVw9GfpbJmeev9F08WW8uDkaslwX6avlWGU6NRKz0g/SHtCy9J30o/ca9zX3Kfc19zn3BXQKRO8ud477hLnAfc1/G9mrzGlrfexZ5GLdn6ZZrrEohI2wVHhZywjbhUWEy8icMCGNCUdiBlq3r+xafL549HQ5jH+an+1y+LlYBifuxAvRN/lVVVOlwlCkdVm9NOL5BE4wkQ2SMlDZU97hX86EilU/lUmkQUztTE6mx1EEPh7OmdqBtAvv8HdWpbrJS6tJj3n0CWdM6busNzRV3S9KTYhqvNiqWmuroiKgYhshMjmhTh9ptWhsF7970j/SbMrsPE1suR5z7DMC+P/Hs+y7ijrQAlhyAgccjbhjPygfeBTjzhNqy28EdkUh8C+DU9+z2v/oyeH791OncxHOs5y2AtTc7nb/f73TWPkD/qwBnjX8BoJ98VQNcC+8AAEAASURBVHgB7N19sF3T3QfwdfNCKlGt1FuEommNeqlpSmVMp1qiWm99SIeOPlPD6B8YRUfq0SgaGTVtCPWHljGNMaZ/qJcSUowGDZVohCFECCkaKZIIzZub5MnZ457p7b3JuWffffbZa93PmbnNPnvvtddvfX7rH9/ec0/Hps2v4EWAAAECBAgQIECAAAECBAgQIECAAIEEBQYluCZLIkCAAAECBAgQIECAAAECBAgQIECAQCYgALURCBAgQIAAAQIECBAgQIAAAQIECBBIVkAAmmxrLYwAAQIECBAgQIAAAQIECBAgQIAAAQGoPUCAAAECBAgQIECAAAECBAgQIECAQLICAtBkW2thBAgQIECAAAECBAgQIECAAAECBAgIQO0BAgQIECBAgAABAgQIECBAgAABAgSSFRCAJttaCyNAgAABAgQIECBAgAABAgQIECBAQABqDxAgQIAAAQIECBAgQIAAAQIECBAgkKyAADTZ1loYAQIECBAgQIAAAQIECBAgQIAAAQICUHuAAAECBAgQIECAAAECBAgQIECAAIFkBQSgybbWwggQIECAAAECBAgQIECAAAECBAgQEIDaAwQIECBAgAABAgQIECBAgAABAgQIJCsgAE22tRZGgAABAgQIECBAgAABAgQIECBAgIAA1B4gQIAAAQIECBAgQIAAAQIECBAgQCBZAQFosq21MAIECBAgQIAAAQIECBAgQIAAAQIEBKD2AAECBAgQIECAAAECBAgQIECAAAECyQoIQJNtrYURIECAAAECBAgQIECAAAECBAgQICAAtQcIECBAgAABAgQIECBAgAABAgQIEEhWQACabGstjAABAgQIECBAgAABAgQIECBAgAABAag9QIAAAQIECBAgQIAAAQIECBAgQIBAsgIC0GRba2EECBAgQIAAAQIECBAgQIAAAQIECAhA7QECBAgQIECAAAECBAgQIECAAAECBJIVEIAm21oLI0CAAAECBAgQIECAAAECBAgQIEBAAGoPECBAgAABAgQIECBAgAABAgQIECCQrIAANNnWWhgBAgQIECBAgAABAgQIECBAgAABAgJQe4AAAQIECBAgQIAAAQIECBAgQIAAgWQFBKDJttbCCBAgQIAAAQIECBAgQIAAAQIECBAQgNoDBAgQIECAAAECBAgQIECAAAECBAgkKyAATba1FkaAAAECBAgQIECAAAECBAgQIECAgADUHiBAgAABAgQIECBAgAABAgQIECBAIFkBAWiyrbUwAgQIECBAgAABAgQIECBAgAABAgQEoPYAAQIECBAgQIAAAQIECBAgQIAAAQLJCghAk22thREgQIAAAQIECBAgQIAAAQIECBAgIAC1BwgQIECAAAECBAgQIECAAAECBAgQSFZAAJpsay2MAAECBAgQIECAAAECBAgQIECAAAEBqD1AgAABAgQIECBAgAABAgQIECBAgECyAgLQZFtrYQQIECBAgAABAgQIECBAgAABAgQICEDtAQIECBAgQIAAAQIECBAgQIAAAQIEkhUQgCbbWgsjQIAAAQIECBAgQIAAAQIECBAgQEAAag8QIECAAAECBAgQIECAAAECBAgQIJCsgAA02dZaGAECBAgQIECAAAECBAgQIECAAAECAlB7gAABAgQIECBAgAABAgQIECBAgACBZAUEoMm21sIIECBAgAABAgQIECBAgAABAgQIEBCA2gMECBAgQIAAAQIECBAgQIAAAQIECCQrIABNtrUWRoAAAQIECBAgQIAAAQIECBAgQICAANQeIECAAAECBAgQIECAAAECBAgQIEAgWQEBaLKttTACBAgQIECAAAECBAgQIECAAAECBASg9gABAgQIECBAgAABAgQIECBAgAABAskKCECTba2FESBAgAABAgQIECBAgAABAgQIECAgALUHCBAgQIAAAQIECBAgQIAAAQIECBBIVkAAmmxrLYwAAQIECBAgQIAAAQIECBAgQIAAAQGoPUCAAAECBAgQIECAAAECBAgQIECAQLICAtBkW2thBAgQIECAAAECBAgQIECAAAECBAgIQO0BAgQIECBAgAABAgQIECBAgAABAgSSFRCAJttaCyNAgAABAgQIECBAgAABAgQIECBAQABqDxAgQIAAAQIECBAgQIAAAQIECBAgkKyAADTZ1loYAQIECBAgQIAAAQIECBAgQIAAAQICUHuAAAECBAgQIECAAAECBAgQIECAAIFkBQSgybbWwggQIECAAAECBAgQIECAAAECBAgQEIDaAwQIECBAgAABAgQIECBAgAABAgQIJCsgAE22tRZGgAABAgQIECBAgAABAgQIECBAgIAA1B4gQIAAAQIECBAgQIAAAQIECBAgQCBZAQFosq21MAIECBAgQIAAAQIECBAgQIAAAQIEBKD2AAECBAgQIECAAAECBAgQIECAAAECyQoIQJNtrYURIECAAAECBAgQIECAAAECBAgQICAAtQcIECBAgAABAgQIECBAgAABAgQIEEhWQACabGstjAABAgQIECBAgAABAgQIECBAgAABAag9QIAAAQIECBAgQIAAAQIECBAgQIBAsgIC0GRba2EECBAgQIAAAQIECBAgQIAAAQIECAhA7QECBAgQIECAAAECBAgQIECAAAECBJIVEIAm21oLI0CAAAECBAgQIECAAAECBAgQIEBAAGoPECBAgAABAgQIECBAgAABAgQIECCQrIAANNnWWhgBAgQIECBAgAABAgQIECBAgAABAgJQe4AAAQIECBAgQIAAAQIECBAgQIAAgWQFBKDJttbCCBAgQIAAAQIECBAgQIAAAQIECBAQgNoDBAgQIECAAAECBAgQIECAAAECBAgkKyAATba1FkaAAAECBAgQIECAAAECBAgQIECAgADUHiBAgAABAgQIECBAgAABAgQIECBAIFkBAWiyrbUwAgQIECBAgAABAgQIECBAgAABAgQEoPYAAQIECBAgQIAAAQIECBAgQIAAAQLJCghAk22thREgQIAAAQIECBAgQIAAAQIECBAgIAC1BwgQIECAAAECBAgQIECAAAECBAgQSFZAAJpsay2MAAECBAgQIECAAAECBAgQIECAAAEBqD1AgAABAgQIECBAgAABAgQIECBAgECyAgLQZFtrYQQIECBAgAABAgQIECBAgAABAgQICEDtAQIECBAgQIAAAQIECBAgQIAAAQIEkhUQgCbbWgsjQIAAAQIECBAgQIAAAQIECBAgQEAAag8QIECAAAECBAgQIECAAAECBAgQIJCsgAA02dZaGAECBAgQIECAAAECBAgQIECAAAECAlB7gAABAgQIECBAgAABAgQIECBAgACBZAUEoMm21sIIECBAgAABAgQIECBAgAABAgQIEBCA2gMECBAgQIAAAQIECBAgQIAAAQIECCQrIABNtrUWRoAAAQIECBAgQIAAAQIECBAgQICAANQeIECAAAECBAgQIECAAAECBAgQIEAgWQEBaLKttTACBAgQIECAAAECBAgQIECAAAECBASg9gABAgQIECBAgAABAgQIECBAgAABAskKCECTba2FESBAgAABAgQIECBAgAABAgQIECAgALUHCBAgQIAAAQIECBAgQIAAAQIECBBIVkAAmmxrLYwAAQIECBAgQIAAAQIECBAgQIAAAQGoPUCAAAECBAgQIECAAAECBAgQIECAQLICAtBkW2thBAgQIECAAAECBAgQIECAAAECBAgIQO0BAgQIECBAgAABAgQIECBAgAABAgSSFRCAJttaCyNAgAABAgQIECBAgAABAgQIECBAQABqDxAgQIAAAQIECBAgQIAAAQIECBAgkKyAADTZ1loYAQIECBAgQIAAAQIECBAgQIAAAQICUHuAAAECBAgQIECAAAECBAgQIECAAIFkBQSgybbWwggQIECAAAECBAgQIECAAAECBAgQEIDaAwQIECBAgAABAgQIECBAgAABAgQIJCsgAE22tRZGgAABAgQIECBAgAABAgQIECBAgIAA1B4gQIAAAQIECBAgQIAAAQIECBAgQCBZAQFosq21MAIECBAgQIAAAQIECBAgQIAAAQIEBKD2AAECBAgQIECAAAECBAgQIECAAAECyQoIQJNtrYURIECAAAECBAgQIECAAAECBAgQICAAtQcIECBAgAABAgQIECBAgAABAgQIEEhWQACabGstjAABAgQIECBAgAABAgQIECBAgAABAag9QIAAAQIECBAgQIAAAQIECBAgQIBAsgIC0GRba2EECBAgQIAAAQIECBAgQIAAAQIECAhA7QECBAgQIECAAAECBAgQIECAAAECBJIVEIAm21oLI0CAAAECBAgQIECAAAECBAgQIEBAAGoPECBAgAABAgQIECBAgAABAgQIECCQrIAANNnWWhgBAgQIECBAgAABAgQIECBAgAABAgJQe4AAAQIECBAgQIAAAQIECBAgQIAAgWQFBKDJttbCCBAgQIAAAQIECBAgQIAAAQIECBAQgNoDBAgQIECAAAECBAgQIECAAAECBAgkKyAATba1FkaAAAECBAgQIECAAAECBAgQIECAgADUHiBAgAABAgQIECBAgAABAgQIECBAIFkBAWiyrbUwAgQIECBAgAABAgQIECBAgAABAgQEoPYAAQIECBAgQIAAAQIECBAgQIAAAQLJCghAk22thREgQIAAAQIECBAgQIAAAQIECBAgIAC1BwgQIECAAAECBAgQIECAAAECBAgQSFZAAJpsay2MAAECBAgQIECAAAECBAgQIECAAAEBqD1AgAABAgQIECBAgAABAgQIECBAgECyAgLQZFtrYQQIECBAgAABAgQIECBAgAABAgQICEDtAQIECBAgQIAAAQIECBAgQIAAAQIEkhUQgCbbWgsjQIAAAQIECBAgQIAAAQIECBAgQEAAag8QIECAAAECBAgQIECAAAECBAgQIJCsgAA02dZaGAECBAgQIECAAAECBAgQIECAAAECAlB7gAABAgQIECBAgAABAgQIECBAgACBZAUEoMm21sIIECBAgAABAgQIECBAgAABAgQIEBCA2gMECBAgQIAAAQIECBAgQIAAAQIECCQrIABNtrUWRoAAAQIECBAgQIAAAQIECBAgQICAANQeIECAAAECBAgQIECAAAECBAgQIEAgWQEBaLKttTACBAgQIECAAAECBAgQIECAAAECBASg9gABAgQIECBAgAABAgQIECBAgAABAskKCECTba2FESBAgAABAgQIECBAgAABAgQIECAgALUHCBAgQIAAAQIECBAgQIAAAQIECBBIVkAAmmxrLYwAAQIECBAgQIAAAQIECBAgQIAAAQGoPUCAAAECBAgQIECAAAECBAgQIECAQLICAtBkW2thBAgQIECAAAECBAgQIECAAAECBAgIQO0BAgQIECBAgAABAgQIECBAgAABAgSSFRCAJttaCyNAgAABAgQIECBAgAABAgQIECBAQABqDxAgQIAAAQIECBAgQIAAAQIECBAgkKyAADTZ1loYAQIECBAgQIAAAQIECBAgQIAAAQICUHuAAAECBAgQIECAAAECBAgQIECAAIFkBQSgybbWwggQIECAAAECBAgQIECAAAECBAgQEIDaAwQIECBAgAABAgQIECBAgAABAgQIJCsgAE22tRZGgAABAgQIECBAgAABAgQIECBAgIAA1B4gQIAAAQIECBAgQIAAAQIECBAgQCBZAQFosq21MAIECBAgQIAAAQIECBAgQIAAAQIEBKD2AAECBAgQIECAAAECBAgQIECAAAECyQoIQJNtrYURIECAAAECBAgQIECAAAECBAgQICAAtQcIECBAgAABAgQIECBAgAABAgQIEEhWQACabGstjAABAgQIECBAgAABAgQIECBAgAABAag9QIAAAQIECBAgQIAAAQIECBAgQIBAsgIC0GRba2EECBAgQIAAAQIECBAgQIAAAQIECAhA7QECBAgQIECAAAECBAgQIECAAAECBJIVEIAm21oLI0CAAAECBAgQIECAAAECBAgQIEBAAGoPECBAgAABAgQIECBAgAABAgQIECCQrIAANNnWWhgBAgQIECBAgAABAgQIECBAgAABAgJQe4AAAQIECBAgQIAAAQIECBAgQIAAgWQFBKDJttbCCBAgQIAAAQIECBAgQIAAAQIECBAQgNoDBAgQIECAAAECBAgQIECAAAECBAgkKyAATba1FkaAAAECBAgQIECAAAECBAgQIECAgADUHiBAgAABAgQIECBAgAABAgQIECBAIFkBAWiyrbUwAgQIECBAgAABAgQIECBAgAABAgQEoPYAAQIECBAgQIAAAQIECBAgQIAAAQLJCghAk22thREgQIAAAQIECBAgQIAAAQIECBAgMAQBgSoLLF++PHR2dla5RLURIECAAAECBAgQIECAAAECBFom8IlPfCJsv/32LXv+QHiwAHQgdDnSNV5zzTXhJz/5SaTVK5sAAQIECBAgQIAAAQIECBAg0H+BwYOHhCeemB0OPfTQ/j9sgD5BADpAGx/DshcsWPBxmbX/l+MTMZSsRgIECBAgQIAAAQIECBAgQIBAgQKrwoYNa8PLL78sAO2HqgC0H3iGliVw7eaJzixrMvMQIECAAAECBAgQIECAAAECBCoi8L+b67itIrXEW4YvQYq3dyonQIAAAQIECBAgQIAAAQIECBAgQKCBgAC0AZDLBAgQIECAAAECBAgQIECAAAECBAjEKyAAjbd3KidAgAABAgQIECBAgAABAgQIECBAoIGAALQBkMsECBAgQIAAAQIECBAgQIAAAQIECMQrIACNt3cqJ0CAAAECBAgQIECAAAECBAgQIECggYAAtAGQywQIECBAgAABAgQIECBAgAABAgQIxCsgAI23dyonQIAAAQIECBAgQIAAAQIECBAgQKCBgAC0AZDLBAgQIECAAAECBAgQIECAAAECBAjEKyAAjbd3KidAgAABAgQIECBAgAABAgQIECBAoIGAALQBkMsECBAgQIAAAQIECBAgQIAAAQIECMQrIACNt3cqJ0CAAAECBAgQIECAAAECBAgQIECggYAAtAGQywQIECBAgAABAgQIECBAgAABAgQIxCsgAI23dyonQIAAAQIECBAgQIAAAQIECBAgQKCBgAC0AZDLBAgQIECAAAECBAgQIECAAAECBAjEKyAAjbd3KidAgAABAgQIECBAgAABAgQIECBAoIGAALQBkMsECBAgQIAAAQIECBAgQIAAAQIECMQrIACNt3cqJ0CAAAECBAgQIECAAAECBAgQIECggYAAtAGQywQIECBAgAABAgQIECBAgAABAgQIxCsgAI23dyonQIAAAQIECBAgQIAAAQIECBAgQKCBgAC0AZDLBAgQIECAAAECBAgQIECAAAECBAjEKyAAjbd3KidAgAABAgQIECBAgAABAgQIECBAoIGAALQBkMsECBAgQIAAAQIECBAgQIAAAQIECMQrIACNt3cqJ0CAAAECBAgQIECAAAECBAgQIECggYAAtAGQywQIECBAgAABAgQIECBAgAABAgQIxCsgAI23dyonQIAAAQIECBAgQIAAAQIECBAgQKCBgAC0AZDLBAgQIECAAAECBAgQIECAAAECBAjEKyAAjbd3KidAgAABAgQIECBAgAABAgQIECBAoIGAALQBkMsECBAgQIAAAQIECBAgQIAAAQIECMQrIACNt3cqJ0CAAAECBAgQIECAAAECBAgQIECggYAAtAGQywQIECBAgAABAgQIECBAgAABAgQIxCsgAI23dyonQIAAAQIECBAgQIAAAQIECBAgQKCBgAC0AZDLBAgQIECAAAECBAgQIECAAAECBAjEKyAAjbd3KidAgAABAgQIECBAgAABAgQIECBAoIGAALQBkMsECBAgQIAAAQIECBAgQIAAAQIECMQrIACNt3cqJ0CAAAECBAgQIECAAAECBAgQIECggYAAtAGQywQIECBAgAABAgQIECBAgAABAgQIxCsgAI23dyonQIAAAQIECBAgQIAAAQIECBAgQKCBgAC0AZDLBAgQIECAAAECBAgQIECAAAECBAjEKyAAjbd3KidAgAABAgQIECBAgAABAgQIECBAoIGAALQBkMsECBAgQIAAAQIECBAgQIAAAQIECMQrIACNt3cqJ0CAAAECBAgQIECAAAECBAgQIECggYAAtAGQywQIECBAgAABAgQIECBAgAABAgQIxCsgAI23dyonQIAAAQIECBAgQIAAAQIECBAgQKCBgAC0AZDLBAgQIECAAAECBAgQIECAAAECBAjEKyAAjbd3KidAgAABAgQIECBAgAABAgQIECBAoIGAALQBkMsECBAgQIAAAQIECBAgQIAAAQIECMQrIACNt3cqJ0CAAAECBAgQIECAAAECBAgQIECggYAAtAGQywQIECBAgAABAgQIECBAgAABAgQIxCsgAI23dyonQIAAAQIECBAgQIAAAQIECBAgQKCBgAC0AZDLBAgQIECAAAECBAgQIECAAAECBAjEKyAAjbd3KidAgAABAgQIECBAgAABAgQIECBAoIGAALQBkMsECBAgQIAAAQIECBAgQIAAAQIECMQrIACNt3cqJ0CAAAECBAgQIECAAAECBAgQIECggYAAtAGQywQIECBAgAABAgQIECBAgAABAgQIxCsgAI23dyonQIAAAQIECBAgQIAAAQIECBAgQKCBgAC0AZDLBAgQIECAAAECBAgQIECAAAECBAjEKyAAjbd3KidAgAABAgQIECBAgAABAgQIECBAoIGAALQBkMsECBAgQIAAAQIECBAgQIAAAQIECMQrIACNt3cqJ0CAAAECBAgQIECAAAECBAgQIECggYAAtAGQywQIECBAgAABAgQIECBAgAABAgQIxCswJN7S06h83bp14c9//nN49dVXw+uvvx5q7/v6uvHGG/t6q/sIECBAgAABAgQIECBAgAABAgQIDEgBAWgb2/7AAw+Ec845J7z22mu5qhCA5mIziAABAgQIECBAgAABAgQIECBAYAAJCEDb1Oxa6DlhwoSwevXqNlVgWgIECBAgQIAAAQIECBAgQIAAAQLpCwhA29TjX/ziF/Xwc/To0eHSSy8NX/jCF8Lw4cNDR0dHm6oyLQECBAgQIECAAAECBAgQIECAAIG0BASgberns88+m8280047hTlz5oTddtutTZWYlgABAgQIECBAgAABAgQIECBAgEC6Ar4Fvk29feONN7KZx48fL/xsUw9MS4AAAQIECBAgQIAAAQIECBAgkL6AALRNPR47dmw2c+3j714ECBAgQIAAAQIECBAgQIAAAQIECLRGQADaGteGT/3GN76R3fPMM880vNcNBAgQIECAAAECBAgQIECAAAECBAjkExCA5nPr96iTTz457LDDDuHhhx8OjzzySL+f5wEECBAgQIAAAQIECBAgQIAAAQIECPQUEID2NCnlzJgxY8IDDzyQfet7LQydNm1aWLNmTSlzm4QAAQIECBAgQIAAAQIECBAgQIDAQBHwLfBt7PS4cePCTTfdFL7//e+HCy64IFx44YVh1KhR2c+gQY2z6b/97W9trN7UBAgQIECAAAECBAgQIECAAAECBKovIABtY48ee+yxLPjsKmHTpk3hrbfeyn66zvmXAAECBAgQIECAAAECBAgQIECAAIH8AgLQ/Hb9Gjlnzpxw5JFHhs7Ozn49x2ACBAgQIECAAAECBAgQIECAAAECBLYsIADdsk1Lr9x///318PPoo48OF110Udhvv/3CyJEjWzqvhxMgQIAAAQIECBAgQIAAAQIECBAYSAIC0DZ1+y9/+Us280EHHRTuu+++MHTo0DZVYloCBAgQIECAAAECBAgQIECAAAEC6Qo0/qaddNfe1pUtWrQom/+oo44Sfra1EyYnQIAAAQIECBAgQIAAAQIECBBIWUAA2qbu1r4BvvZasWJFmyowLQECBAgQIECAAAECBAgQIECAAIH0BQSgberxEUcckc08c+bMUPv2dy8CBAgQIECAAAECBAgQIECAAAECBIoXEIAWb9qnJ5588slht912C0uXLg2XXnpp2LhxY5/GuYkAAQIECBAgQIAAAQIECBAgQIAAgb4LCED7blXonaNGjQoPP/xw9q3vU6ZMCSeccEJ4/PHHw+rVqwudx8MIECBAgAABAgQIECBAgAABAgQIDGQB3wLfpu7feuut4ZFHHgn77LNPeO+998KMGTOyn1o52267bRg+fHjo6OjYanXvvvvuVq+7SIAAAQIECBAgQIAAAQIECBAgQGCgCwhA27QDnnzyyTB9+vReZ1+3bl2o/XgRIECAAAECBAgQIECAAAECBAgQINA/AQFo//xyj/7Upz4VRo8enXu8gQQIECBAgAABAgQIECBAgAABAgQINBYQgDY2askdV111Vaj9eBEgQIAAAQIECBAgQIAAAQIECBAg0DoBX4LUOltPJkCAAAECBAgQIECAAAECBAgQIECgzQIC0BY34KCDDgq77rprOOaYY1o8k8cTIECAAAECBAgQIECAAAECBAgQIPDfAgLQ/xYp+P0777wTli1bFnxje8GwHkeAAAECBAgQIECAAAECBAgQIECgDwIC0D4guYUAAQIECBAgQIAAAQIECBAgQIAAgTgFBKBx9k3VBAgQIECAAAECBAgQIECAAAECBAj0QUAA2gcktxAgQIAAAQIECBAgQIAAAQIECBAgEKeAADTOvqmaAAECBAgQIECAAAECBAgQIECAAIE+CAhA+4DkFgIECBAgQIAAAQIECBAgQIAAAQIE4hQYEmfZ8VW9YsWKcMcddxRa+IQJEwp9nocRIECAAAECBAgQIECAAAECBAgQSE1AAFpSRxcvXhy+973vFTrbpk2bCn2ehxEgQIAAAQIECBAgQIAAAQIECBBITcBH4FPrqPUQIECAAAECBAgQIECAAAECBAgQIFAX8BugdYrWHuywww7ha1/7Wmsn8XQCBAgQIECAAAECBAgQIECAAAECBLoJCEC7cbTuzZgxY8K9997bugk8mQABAgQIECBAgAABAgQIECBAgACBHgI+At+DxAkCBAgQIECAAAECBAgQIECAAAECBFIREICm0knrIECAAAECBAgQIECAAAECBAgQIECgh4AAtAeJEwQIECBAgAABAgQIECBAgAABAgQIpCIgAE2lk9ZBgAABAgQIECBAgAABAgQIECBAgEAPAQFoDxInCBAgQIAAAQIECBAgQIAAAQIECBBIRUAAmkonrYMAAQIECBAgQIAAAQIECBAgQIAAgR4CQ3qccaJQgTvvvDOsX78+bL/99oU+18MIECBAgAABAgQIECBAgAABAgQIEGgsIABtbNSvO8aNG9ev8QYTIECAAAECBAgQIECAAAECBAgQIJBfwEfg89sZSYAAAQIECBAgQIAAAQIECBAgQIBAxQUEoBVvkPIIECBAgAABAgQIECBAgAABAgQIEMgvIADNb2ckAQIECBAgQIAAAQIECBAgQIAAAQIVFxCAVrxByiNAgAABAgQIECBAgAABAgQIECBAIL+AADS/nZEECBAgQIAAAQIECBAgQIAAAQIECFRcQABa8QYpjwABAgQIECBAgAABAgQIECBAgACB/AIC0Px2RhIgQIAAAQIECBAgQIAAAQIECBAgUHEBAWjFG6Q8AgQIECBAgAABAgQIECBAgAABAgTyCwhA89sZSYAAAQIECBAgQIAAAQIECBAgQIBAxQUEoBVvkPIIECBAgAABAgQIECBAgAABAgQIEMgvIADNb2ckAQIECBAgQIAAAQIECBAgQIAAAQIVFxCAVrxByiNAgAABAgQIECBAgAABAgQIECBAIL+AADS/nZEECBAgQIAAAQIECBAgQIAAAQIECFRcQABa8QYpjwABAgQIECBAgAABAgQIECBAgACB/AIC0Px2RhIgQIAAAQIECBAgQIAAAQIECBAgUHEBAWjFG6Q8AgQIECBAgAABAgQIECBAgAABAgTyCwhA89sZSYAAAQIECBAgQIAAAQIECBAgQIBAxQUEoBVvkPIIECBAgAABAgQIECBAgAABAgQIEMgvIADNb2ckAQIECBAgQIAAAQIECBAgQIAAAQIVFxCAVrxByiNAgAABAgQIECBAgAABAgQIECBAIL+AADS/nZEECBAgQIAAAQIECBAgQIAAAQIECFRcQABa8QYpjwABAgQIECBAgAABAgQIECBAgACB/AIC0Px2RhIgQIAAAQIECBAgQIAAAQIECBAgUHEBAWjFG6Q8AgQIECBAgAABAgQIECBAgAABAgTyCwhA89sZSYAAAQIECBAgQIAAAQIECBAgQIBAxQUEoBVvkPIIECBAgAABAgQIECBAgAABAgQIEMgvIADNb2ckAQIECBAgQIAAAQIECBAgQIAAAQIVFxCAVrxByiNAgAABAgQIECBAgAABAgQIECBAIL+AADS/nZEECBAgQIAAAQIECBAgQIAAAQIECFRcQABa8QYpjwABAgQIECBAgAABAgQIECBAgACB/AIC0Px2RhIgQIAAAQIECBAgQIAAAQIECBAgUHEBAWjFG6Q8AgQIECBAgAABAgQIECBAgAABAgTyCwhA89sZSYAAAQIECBAgQIAAAQIECBAgQIBAxQUEoBVvkPIIECBAgAABAgQIECBAgAABAgQIEMgvIADNb2ckAQIECBAgQIAAAQIECBAgQIAAAQIVFxCAVrxByiNAgAABAgQIECBAgAABAgQIECBAIL+AADS/nZEECBAgQIAAAQIECBAgQIAAAQIECFRcQABa8QYpjwABAgQIECBAgAABAgQIECBAgACB/AIC0Px2RhIgQIAAAQIECBAgQIAAAQIECBAgUHEBAWjFG6Q8AgQIECBAgAABAgQIECBAgAABAgTyCwhA89sZSYAAAQIECBAgQIAAAQIECBAgQIBAxQUEoBVvkPIIECBAgAABAgQIECBAgAABAgQIEMgvIADNb2ckAQIECBAgQIAAAQIECBAgQIAAAQIVFxCAVrxByiNAgAABAgQIECBAgAABAgQIECBAIL+AADS/nZEECBAgQIAAAQIECBAgQIAAAQIECFRcQABa8QYpjwABAgQIECBAgAABAgQIECBAgACB/AIC0Px2RhIgQIAAAQIECBAgQIAAAQIECBAgUHEBAWjFG6Q8AgQIECBAgAABAgQIECBAgAABAgTyCwhA89sZSYAAAQIECBAgQIAAAQIECBAgQIBAxQUEoBVvkPIIECBAgAABAgQIECBAgAABAgQIEMgvIADNb2ckAQIECBAgQIAAAQIECBAgQIAAAQIVFxCAVrxByiNAgAABAgQIECBAgAABAgQIECBAIL+AADS/nZEECBAgQIAAAQIECBAgQIAAAQIECFRcQABa8QYpjwABAgQIECBAgAABAgQIECBAgACB/AIC0Px2RhIgQIAAAQIECBAgQIAAAQIECBAgUHEBAWjFG6Q8AgQIECBAgAABAgQIECBAgAABAgTyCwhA89sZSYAAAQIECBAgQIAAAQIECBAgQIBAxQWGVLw+5RHYLPB/m3+uIkGAAAECBAgQIECAAAECBAgQGGACywbYeluzXAFoa1w9tQCBz33ucx8/5Z3N/9Z+vAgQIECAAAECBAgQIECAAAECA0ugo2NQ2HvvvQfWogtebcemza+Cn+lxBAoTWLJkSejs7CzseR5EgAABAgQIECBAgAABAgQIEIhJYMSIEWGXXXaJqeTK1SoArVxLFESAAAECBAgQIECAAAECBAgQIECAQFECvgSpKEnPIUCAAAECBAgQIECAAAECBAgQIECgcgIC0Mq1REEECBAgQIAAAQIECBAgQIAAAQIECBQlIAAtStJzCBAgQIAAAQIECBAgQIAAAQIECBConIAAtHItURABAgQIECBAgAABAgQIECBAgAABAkUJCECLkvQcAgQIECBAgAABAgQIECBAgAABAgQqJyAArVxLFESAAAECBAgQIECAAAECBAgQIECAQFECAtCiJD2HAAECBAgQIECAAAECBAgQIECAAIHKCQhAK9cSBREgQIAAAQIECBAgQIAAAQIECBAgUJSAALQoSc8hQIAAAQIECBAgQIAAAQIECBAgQKByAgLQyrVEQQQIECBAgAABAgQIECBAgAABAgQIFCUgAC1K0nMIECBAgAABAgQIECBAgAABAgQIEKicgAC0ci1REAECBAgQIECAAAECBAgQIECAAAECRQkIQIuS9BwCBAgQIECAAAECBAgQIECAAAECBConIACtXEsURIAAAQIECBAgQIAAAQIECBAgQIBAUQIC0KIkPYcAAQIECBAgQIAAAQIECBAgQIAAgcoJCEAr1xIFESBAgAABAgQIECBAgAABAgQIECBQlIAAtChJzyFAgAABAgQIECBAgAABAgQIECBAoHICAtDKtURBBAgQIECAAAECBAgQIECAAAECBAgUJSAALUrScwgQIECAAAECBAgQIECAAAECBAgQqJyAALRyLVEQAQIECBAgQIAAAQIECBAgQIAAAQJFCQhAi5L0HAIECBAgQIAAAQIECBAgQIAAAQIEKicgAK1cSxREgAABAgQIECBAgAABAgQIECBAgEBRAgLQoiQ9hwABAgQIECBAgAABAgQIECBAgACBygkIQCvXEgURIECAAAECBAgQIECAAAECBAgQIFCUgAC0KEnPIUCAAAECBAgQIECAAAECBAgQIECgcgIC0Mq1REEECBAgQIAAAQIECBAgQIAAAQIECBQlIAAtStJzCBAgQIAAAQIECBAgQIAAAQIECBConIAAtHItURABAgQIECBAgAABAgQIECBAgAABAkUJCECLkvQcAgQIECBAgAABAgQIECBAgAABAgQqJzCkchUpiMDHAjNnzgyTJk0KnZ2dTAgQIECAAAECBAgQIEAgQoHjjz8+TJ48OcLKlUyAQEoCHZs2v1JakLWkI3DWWWeFm2++OZ0FWQkBAgQIECBAgAABAgQGmMAuu+wS3n777QG2asslQKBqAn4DtGodUU9doCubH/rly8Lgvf+nft4BAQIECBAgQIAAAQIECFRcYN3ysPa+b4au/66reLXKI0AgcQEBaOINTmF5HSP2CINHfimFpVgDAQIECBAgQIAAAQIEBoTApjX/GhDrtEgCBOIQ8CVIcfRJlQQIECBAgAABAgQIECBAgAABAgQI5BAQgOZAM4QAAQIECBAgQIAAAQIECBAgQIAAgTgEBKBx9EmVBAgQIECAAAECBAgQIECAAAECBAjkEBCA5kAzhAABAgQIECBAgAABAgQIECBAgACBOAQEoHH0SZUECBAgQIAAAQIECBAgQIAAAQIECOQQEIDmQDOEAAECBAgQIECAAAECBAgQIECAAIE4BASgcfRJlQQIECBAgAABAgQIECBAgAABAgQI5BAQgOZAM4QAAQIECBAgQIAAAQIECBAgQIAAgTgEBKBx9EmVBAgQIECAAAECBAgQIECAAAECBAjkEBCA5kAzhAABAgQIECBAgAABAgQIECBAgACBOAQEoHH0SZUECBAgQIAAAQIECBAgQIAAAQIECOQQEIDmQDOEAAECBAgQIECAAAECBAgQIECAAIE4BASgcfRJlQQIECBAgAABAgQIECBAgAABAgQI5BAQgOZAM4QAAQIECBAgQIAAAQIECBAgQIAAgTgEBKBx9EmVBAgQIECAAAECBAgQIECAAAECBAjkEBCA5kAzhAABAgQIECBAgAABAgQIECBAgACBOAQEoHH0SZUECBAgQIAAAQIECBAgQIAAAQIECOQQEIDmQDOEAAECBAgQIECAAAECBAgQIECAAIE4BASgcfRJlQQIECBAgAABAgQIECBAgAABAgQI5BAQgOZAM4QAAQIECBAgQIAAAQIECBAgQIAAgTgEBKBx9EmVBAgQIECAAAECBAgQIECAAAECBAjkEBCA5kAzhAABAgQIECBAgAABAgQIECBAgACBOAQEoHH0SZUECBAgQIAAAQIECBAgQIAAAQIECOQQEIDmQDOEAAECBAgQIECAAAECBAgQIECAAIE4BASgcfRJlQQIECBAgAABAgQIECBAgAABAgQI5BAQgOZAM4QAAQIECBAgQIAAAQIECBAgQIAAgTgEBKBx9EmVBAgQIECAAAECBAgQIECAAAECBAjkEBCA5kAzhAABAgQIECBAgAABAgQIECBAgACBOAQEoHH0SZUECBAgQIAAAQIECBAgQIAAAQIECOQQEIDmQDOEAAECBAgQIECAAAECBAgQIECAAIE4BASgcfRJlQQIECBAgAABAgQIECBAgAABAgQI5BAQgOZAM4QAAQIECBAgQIAAAQIECBAgQIAAgTgEBKBx9EmVBAgQIECAAAECBAgQIECAAAECBAjkEBCA5kAzhAABAgQIECBAgAABAgQIECBAgACBOAQEoHH0SZUECBAgQIAAAQIECBAgQIAAAQIECOQQEIDmQDOEAAECBAgQIECAAAECBAgQIECAAIE4BASgcfRJlQQIECBAgAABAgQIECBAgAABAgQI5BAQgOZAM4QAAQIECBAgQIAAAQIECBAgQIAAgTgEBKBx9EmVBAgQIECAAAECBAgQIECAAAECBAjkEBCA5kAzhAABAgQIECBAgAABAgQIECBAgACBOAQEoHH0SZUECBAgQIAAAQIECBAgQIAAAQIECOQQEIDmQDOEAAECBAgQIECAAAECBAgQIECAAIE4BASgcfRJlQQIECBAgAABAgQIECBAgAABAgQI5BAQgOZAM4QAAQIECBAgQIAAAQIECBAgQIAAgTgEBKBx9EmVBAgQIECAAAECBAgQIECAAAECBAjkEBCA5kAzhAABAgQIECBAgAABAgQIECBAgACBOAQEoHH0SZUECBAgQIAAAQIECBAgQIAAAQIECOQQEIDmQDOEAAECBAgQIECAAAECBAgQIECAAIE4BASgcfRJlQQIECBAgAABAgQIECBAgAABAgQI5BAQgOZAM4QAAQIECBAgQIAAAQIECBAgQIAAgTgEBKBt6tP69etzz7x27dowceLE3OMNJECAAAECBAgQIECAAAECBAgQIDBQBASgber05ZdfHubPn9/07E899VT48pe/HH71q181PdYAAgQIECBAgAABAgQIECBAgAABAgNNQADapo6vWLEijB8/Przwwgt9qmDdunXh4osvDocffnh48cUX+zTGTQQIECBAgAABAgQIECBAgAABAgQGuoAAtI074N133w1HHnlkWLhw4VarmDt3bvZbn1dffXXYsGFDdu9ee+211TEuEiBAgAABAgQIECBAgAABAgQIECAQggC0TbvgwAMPzGZetmxZFoK++uqrPSqp/Z3QSy65JIwbNy4sWLAguz5o0KDw4x//ODz//PM97neCAAECBAgQIECAAAECBAgQIECAAIHuAgLQ7h6lvTv77LPD5MmTs/neeuutLARdsmRJff6nn346+63Pq666qv5bn/vvv3+YPXt2mDZtWhg+fHj9XgcECBAgQIAAAQIECBAgQIAAAQIECPQuIADt3aWUs5MmTQq1gLP2qoWf3/zmN8Nrr70Waudrv/XZ9fdBt9lmm3DZZZeFefPmhcMOO6yU2kxCgAABAgQIECBAgAABAgQIECBAIAWBISksIuY11L7YaPDgwWHixIlh8eLF4fOf/3z9Nz5r6/rqV78abr755nDAAQfEvEy1EyBAgAABAgQIECBAgAABAgQIEGiLgN8AbQt790kvuuiicM0112Qnu77kaLvttsvOPfHEE8LP7lzeESBAgAABAgQIECBAgAABAgQIEOizgAC0z1StvfGCCy4I1113XX2SPfbYI/zgBz8ItS898iJAgAABAgQIECBAgAABAgQIECBAIJ+AdC2fW0tGnXfeeeGGG24IHR0dYeHChWH8+PFhxYoVLZnLQwkQIECAAAECBAgQIECAAAECBAgMBAF/A7TFXd53333DsmXLcs3y7LPPht133z3UvgSpt9fKlSt7O+0cAQIECBAgQIAAAQIECBAgQIAAAQIfCwhAW7wVVq1aFd5///3cs6xZsybUfrwIECBAgAABAgQIECBAgAABAgQIEGheQADavFlTI2p/y3PYsGFNjXEzAQIECBAgQIAAAQIECBAgQIAAAQLFCAhAi3Hc4lPmzJmzxWsuECBAgAABAgQIECBAgAABAgQIECDQWgFfgtRaX08nQIAAAQIECBAgQIAAAQIECBAgQKCNAgLQNuL/59QvvfRSWLJkyX+eqh//+te/DnfddVdYvXp1/ZwDAgQIECBAgAABAgQIECBAgAABAgQaCwhAGxu19I65c+eGsWPHhv322y/86U9/6nWuG264IZx00klh5513DtOnT+/1HicJECBAgAABAgQIECBAgAABAgQIEOgpIADtaVLamXvuuSd8/etfD/PmzcvmXLhwYY+5Ozs7w5tvvpmd//e//x1OP/30cOGFF/a4zwkCBAgQIECAAAECBAgQIECAAAECBHoKCEB7mpRyZtWqVeGMM84Ia9asyearBaHf/va3e8w9ePDg8Ne//jX8/Oc/DyNGjMiuX3vtteGhhx7qca8TBAgQIECAAAECBAgQIECAAAECBAh0FxCAdvco7d20adPC8uXLs/mmTp0aZs2aFY499tge83d0dITDDjssXHHFFeHZZ58No0ePzu45//zze9zrBAECBAgQIECAAAECBAgQIECAAAEC3QUEoN09Snv3+OOPZ3MdffTRff5I+z777BNqX4hUey1YsCAsXbo0O/Y/BAgQIECAAAECBAgQIECAAAECBAj0LiAA7d2l5WdfeeWVbI7ePva+tcmPOeaY+uUXX3yxfuyAAAECBAgQIECAAAECBAgQIECAAIGeAgLQnialnPnggw+yeWp/47OZ13bbbReGDh2aDan9HVEvAgQIECBAgAABAgQIECBAgAABAgS2LCAA3bJNS6/sueee2fP//ve/NzXP888/Hz766KNszIEHHtjUWDcTIECAAAECBAgQIECAAAECBAgQGGgCAtA2dXzs2LHZzHfeeWdYtGhRn6u47rrrsntr3whf+5ugXgQIECBAgAABAgQIECBAgAABAgQIbFlAALplm5ZeOfPMM7Pn1z4KP2HChPDSSy9tdb7169eHKVOmhOnTp2f3nXjiiaH2DfFeBAgQIECAAAECBAgQIECAAAECBAhsWWDIli+50kqBww47LJx00kmh9hugzz33XNh///3DqaeeGo444ohQ+3j87rvvHt5///3w5ptvZr8h+tvf/jY7rtU0atSocP3117eyPM8mQIAAAQIECBAgQIAAAQIECBAgkISAALSNbfz9738fFi9eHObPnx82btwYbr/99uxnayXVPvpe+y3QHXfccWu3uUaAAAECBAgQIECAAAECBAgQIECAwGYBH4Fv4zbYfvvtw1NPPRUuu+yyUPt29629ah93P/3008PLL78cjjrqqK3d6hoBAgQIECBAgAABAgQIECBAgAABAh8L+A3QNm+FbbbZJlx++eXh4osvDg8//HB47LHHwtKlS8M777wTRo4cGcaMGZP9fOUrXwn77bdfm6s1PQECBAgQIECAAAECBAgQIECAAIG4BASgFenXsGHDwnHHHZf9VKQkZRAgQIAAAQIECBAgQIAAAQIECBCIXsBH4KNvoQUQIECAAAECBAgQIECAAAECBAgQILAlAQHolmScJ0CAAAECBAgQIECAAAECBAgQIEAgegEfgW9xC/fdd9+wbNmybJZbb701nHDCCdnxhRdeGG655ZZ+zb5y5cp+jTeYAAECBAgQIECAAAECBAgQIECAQOoCAtAWd3jVqlXh/fffz2ZZv359fbY1a9bUz9dPOiBAgAABAgQIECBAgAABAgQIECBAoFABAWihnD0ftscee4TaFxzVXsOHD6/fUPuG97322qv+3gEBAgQIECBAgAABAgQIECBAgAABAsULCECLN+32xDlz5nR73/XmyiuvDLUfLwIECBAgQIAAAQIECBAgQIAAAQIEWifgS5BaZ+vJBAgQIECAAAECBAgQIECAAAECBAi0WUAA2uYGmJ4AAQIECBAgQIAAAQIECBAgQIAAgdYJCEBbZ+vJBAgQIECAAAECBAgQIECAAAECBAi0WcDfAC2xAS+++GK47777wpNPPhnmzp0bdtxxx3DAAQeEI444Ipxxxhlh8ODBJVZjKgIECBAgQIAAAQIECBAgQIAAAQLpCwhAS+rx7bffHs4888ywdu3a+oxvvvlmeO6550Lt2o033hh+97vfhbFjx9avOyBAgAABAgQIECBAgAABAgQIECBAoH8CPgLfP78+jZ46dWo47bTTuoWf/z1w3rx5Yfz48eG9997770veEyBAgAABAgQIECBAgAABAgQIECCQU0AAmhOur8Nqv/F55ZVX1m/fe++9w/nnnx8efPDBMGPGjDBp0qQwbNiw7PqKFSuy9/WbHRAgQIAAAQIECBAgQIAAAQIECBAg0C8BH4HvF1/jwXfffXdYuXJlduNee+0V5s+fHz75yU/WB37nO98Jp5xySjjkkEOy3xC96aabwsSJE0MtKPUiQIAAAQIECBAgQIAAAQIECBAgQKB/An4DtH9+DUffcccd9Xtuu+22buFn14XaFyH96Ec/yt5u2LAhPP/8812X/EuAAAECBAgQIECAAAECBAgQIECAQD8EBKD9wOvL0MWLF2e37brrruHwww/f4pCTTz65fu3111+vHzsgQIAAAQIECBAgQIAAAQIECBAgQCC/gAA0v12fRnZ9/H3kyJFbvX/06NH160uWLKkfOyBAgAABAgQIECBAgAABAgQIECBAIL+AADS/XZ9Grlu3Lrtv22233er9o0aNql9/44036scOCBAgQIAAAQIECBAgQIAAAQIECBDILyAAzW/Xp5EbN27M7uvo6Njq/UOHDq1f7wpN6yccECBAgAABAgQIECBAgAABAgQIECCQS0AAmovNIAIECBAgQIAAAQIECBAgQIAAAQIEYhAQgMbQJTUSIECAAAECBAgQIECAAAECBAgQIJBLQACai80gAgQIECBAgAABAgQIECBAgAABAgRiEBCAxtAlNRIgQIAAAQIECBAgQIAAAQIECBAgkEtgSK5RBjUtsHTp0nD55ZdvcdymTZvq1xYuXLjVe7tu3Nrzuu7xLwECBAgQIECAAAECBAgQIECAAIGBLCAALan7//znP8MVV1zRp9leeumlPt0rAO0Tp5sIECBAgAABAgQIECBAgAABAgQGsICPwA/g5ls6AQIECBAgQIAAAQIECBAgQIAAgdQF/AZoizt87rnnhg8//LDFs3g8AQIECBAgQIAAAQIECBAgQIAAAQK9CQhAe1Mp8NzPfvazAp/mUQQIECBAgAABAgQIECBAgAABAgQINCPgI/DNaLmXAAECBAgQIECAAAECBAgQIECAAIGoBASgUbVLsQQIECBAgAABAgQIECBAgAABAgQINCMgAG1Gy70ECBAgQIAAAQIECBAgQIAAAQIECEQlIACNql2KJUCAAAECBAgQIECAAAECBAgQIECgGQEBaDNa7iVAgAABAgQIECBAgAABAgQIECBAICoBAWhU7VIsAQIECBAgQIAAAQIECBAgQIAAAQLNCAhAm9FyLwECBAgQIECAAAECBAgQIECAAAECUQkIQKNql2IJECBAgAABAgQIECBAgAABAgQIEGhGQADajJZ7CRAgQIAAAQIECBAgQIAAAQIECBCISkAAGlW7FEuAAAECBAgQIECAAAECBAgQIECAQDMCAtBmtNxLgAABAgQIECBAgAABAgQIECBAgEBUAgLQqNqlWAIECBAgQIAAAQIECBAgQICrRqwgAABAAElEQVQAAQIEmhEQgDaj5V4CBAgQIECAAAECBAgQIECAAAECBKISEIBG1S7FEiBAgAABAgQIECBAgAABAgQIECDQjIAAtBkt9xIgQIAAAQIECBAgQIAAAQIECBAgEJWAADSqdimWAAECBAgQIECAAAECBAgQIECAAIFmBASgzWi5lwABAgQIECBAgAABAgQIECBAgACBqAQEoFG1S7EECBAgQIAAAQIECBAgQIAAAQIECDQjIABtRsu9BAgQIECAAAECBAgQIECAAAECBAhEJSAAjapdiiVAgAABAgQIECBAgAABAgQIECBAoBkBAWgzWu4lQIAAAQIECBAgQIAAAQIECBAgQCAqAQFoVO1SLAECBAgQIECAAAECBAgQIECAAAECzQgIQJvRci8BAgQIECBAgAABAgQIECBAgAABAlEJCECjapdiCRAgQIAAAQIECBAgQIAAAQIECBBoRkAA2oyWewkQIECAAAECBAgQIECAAAECBAgQiEpAABpVuxRLgAABAgQIECBAgAABAgQIECBAgEAzAgLQZrTcS4AAAQIECBAgQIAAAQIECBAgQIBAVAIC0KjapVgCBAgQIECAAAECBAgQIECAAAECBJoREIA2o+VeAgQIECBAgAABAgQIECBAgAABAgSiEhCARtUuxRIgQIAAAQIECBAgQIAAAQIECBAg0IyAALQZLfcSIECAAAECBAgQIECAAAECBAgQIBCVgAA0qnYplgABAgQIECBAgAABAgQIECBAgACBZgQEoM1ouZcAAQIECBAgQIAAAQIECBAgQIAAgagEBKBRtUuxBAgQIECAAAECBAgQIECAAAECBAg0IyAAbUbLvQQIECBAgAABAgQIECBAgAABAgQIRCUgAI2qXYolQIAAAQIECBAgQIAAAQIECBAgQKAZAQFoM1ruJUCAAAECBAgQIECAAAECBAgQIEAgKgEBaFTtUiwBAgQIECBAgAABAgQIECBAgAABAs0ICECb0XIvAQIECBAgQIAAAQIECBAgQIAAAQJRCQhAo2qXYgkQIECAAAECBAgQIECAAAECBAgQaEZAANqMlnsJECBAgAABAgQIECBAgAABAgQIEIhKQAAaVbsUS4AAAQIECBAgQIAAAQIECBAgQIBAMwIC0Ga03EuAAAECBAgQIECAAAECBAgQIECAQFQCAtCo2qVYAgQIECBAgAABAgQIECBAgAABAgSaERCANqPlXgIECBAgQIAAAQIECBAgQIAAAQIEohIQgEbVLsUSIECAAAECBAgQIECAAAECBAgQINCMgAC0GS33EiBAgAABAgQIECBAgAABAgQIECAQlYAANKp2KZYAAQIECBAgQIAAAQIECBAgQIAAgWYEBKDNaLmXAAECBAgQIECAAAECBAgQIECAAIGoBASgUbVLsQQIECBAgAABAgQIECBAgAABAgQINCMgAG1Gy70ECBAgQIAAAQIECBAgQIAAAQIECEQlMCSqahU7IAU6F90WNr47b0Cu3aIJECBAgAABAgQIECAQpUDn6ijLVjQBAmkKCEDT7GsSqxo+fHi2jo1LZ4XajxcBAgQIECBAgAABAgQIxCXQ9d91cVWtWgIEUhPo2LT5ldqirCcNgffeey/88Y9/DJ2dnWksyCoIECBAgAABAgQIECAwgAQ6OjrCuHHjwsEHHzyAVm2pBAhUUUAAWsWuqIkAAQIECBAgQIAAAQIECBAgQIAAgUIEfAlSIYweQoAAAQIECBAgQIAAAQIECBAgQIBAFQUEoFXsipoIECBAgAABAgQIECBAgAABAgQIEChEQABaCKOHECBAgAABAgQIECBAgAABAgQIECBQRQEBaBW7oiYCBAgQIECAAAECBAgQIECAAAECBAoREIAWwughBAgQIECAAAECBAgQIECAAAECBAhUUUAAWsWuqIkAAQIECBAgQIAAAQIECBAgQIAAgUIEBKCFMHoIAQIECBAgQIAAAQIECBAgQIAAAQJVFBCAVrEraiJAgAABAgQIECBAgAABAgQIECBAoBABAWghjB5CgAABAgQIECBAgAABAgQIECBAgEAVBQSgVeyKmggQIECAAAECBAgQIECAAAECBAgQKERAAFoIo4cQIECAAAECBAgQIECAAAECBAgQIFBFAQFoFbuiJgIECBAgQIAAAQIECBAgQIAAAQIEChEQgBbC6CEECBAgQIAAAQIECBAgQIAAAQIECFRRQABaxa6oiQABAgQIECBAgAABAgQIECBAgACBQgQEoIUweggBAgQIECBAgAABAgQIECBAgAABAlUUEIBWsStqIkCAAAECBAgQIECAAAECBAgQIECgEAEBaCGMHkKAAAECBAgQIECAAAECBAgQIECAQBUFBKBV7IqaCBAgQIAAAQIECBAgQIAAAQIECBAoREAAWgijhxAgQIAAAQIECBAgQIAAAQIECBAgUEUBAWgVu6ImAgQIECBAgAABAgQIECBAgAABAgQKERCAFsLoIQQIECBAgAABAgQIECBAgAABAgQIVFFAAFrFrqiJAAECBAgQIECAAAECBAgQIECAAIFCBASghTB6CAECBAgQIECAAAECBAgQIECAAAECVRQQgFaxK2oiQIAAAQIECBAgQIAAAQIECBAgQKAQAQFoIYweQoAAAQIECBAgQIAAAQIECBAgQIBAFQUEoFXsipoIECBAgAABAgQIECBAgAABAgQIEChEQABaCKOHECBAgAABAgQIECBAgAABAgQIECBQRQEBaBW7oiYCBAgQIECAAAECBAgQIECAAAECBAoREIAWwughBAgQIECAAAECBAgQIECAAAECBAhUUUAAWsWuqCkTeOWVV8KUKVPCBx98QIQAAQIECBAgQIAAAQIECBAgQIBALgEBaC42g8oQmDp1apg0aVK46667ypjOHAQIECBAgAABAgQIECBAgAABAgkKCEATbGoqS/roo4+ypXT9m8q6rIMAAQIECBAgQIAAAQIECBAgQKA8AQFoedZmIkCAAAECBAgQIECAAAECBAgQIECgZAEBaMngpiNAgAABAgQIECBAgAABAgQIECBAoDwBAWh51mYiQIAAAQIECBAgQIAAAQIECBAgQKBkAQFoyeCmI0CAAAECBAgQIECAAAECBAgQIECgPAEBaHnWZiJAgAABAgQIECBAgAABAgQIECBAoGQBAWjJ4KYjQIAAAQIECBAgQIAAAQIECBAgQKA8AQFoedZmIkCAAAECBAgQIECAAAECBAgQIECgZAEBaMngpiNAgAABAgQIECBAgAABAgQIECBAoDwBAWh51mYiQIAAAQIECBAgQIAAAQIECBAgQKBkAQFoyeCmI0CAAAECBAgQIECAAAECBAgQIECgPAEBaHnWZiJAgAABAgQIECBAgAABAgQIECBAoGQBAWjJ4KYjQIAAAQIECBAgQIAAAQIECBAgQKA8AQFoedZmIkCAAAECBAgQIECAAAECBAgQIECgZAEBaMngpiNAgAABAgQIECBAgAABAgQIECBAoDwBAWh51mYiQIAAAQIECBAgQIAAAQIECBAgQKBkAQFoyeCmI0CAAAECBAgQIECAAAECBAgQIECgPAEBaHnWZiJAgAABAgQIECBAgAABAgQIECBAoGQBAWjJ4KYjQIAAAQIECBAgQIAAAQIECBAgQKA8AQFoedZmIkCAAAECBAgQIECAAAECBAgQIECgZAEBaMngpiNAgAABAgQIECBAgAABAgQIECBAoDwBAWh51mYiQIAAAQIECBAgQIAAAQIECBAgQKBkAQFoyeCmI0CAAAECBAgQIECAAAECBAgQIECgPAEBaHnWZiJAgAABAgQIECBAgAABAgQIECBAoGQBAWjJ4KYjQIAAAQIECBAgQIAAAQIECBAgQKA8AQFoedZmIkCAAAECBAgQIECAAAECBAgQIECgZAEBaMngpiNAgAABAgQIECBAgAABAgQIECBAoDwBAWh51mYiQIAAAQIECBAgQIAAAQIECBAgQKBkAQFoyeCmI0CAAAECBAgQIECAAAECBAgQIECgPAEBaHnWZiJAgAABAgQIECBAgAABAgQIECBAoGQBAWjJ4KYjQIAAAQIECBAgQIAAAQIECBAgQKA8AQFoedZmIkCAAAECBAgQIECAAAECBAgQIECgZAEBaMngpiNAgAABAgQIECBAgAABAgQIECBAoDwBAWh51mYiQIAAAQIECBAgQIAAAQIECBAgQKBkAQFoyeCmI0CAAAECBAgQIECAAAECBAgQIECgPAEBaHnWZiJAgAABAgQIECBAgAABAgQIECBAoGQBAWjJ4KYjQIAAAQIECBAgQIAAAQIECBAgQKA8AQFoedZmIkCAAAECBAgQIECAAAECBAgQIECgZAEBaMngpiNAgAABAgQIECBAgAABAgQIECBAoDwBAWh51mYiQIAAAQIECBAgQIAAAQIECBAgQKBkAQFoyeCmI0CAAAECBAgQIECAAAECBAgQIECgPAEBaHnWZiJAgAABAgQIECBAgAABAgQIECBAoGQBAWjJ4KYjQIAAAQIECBAgQIAAAQIECBAgQKA8AQFoedZmIkCAAAECBAgQIECAAAECBAgQIECgZAEBaMngpiNAgAABAgQIECBAgAABAgQIECBAoDwBAWh51mYiQIAAAQIECBAgQIAAAQIECBAgQKBkAQFoyeCmI0CAAAECBAgQIECAAAECBAgQIECgPAEBaHnWZiJAgAABAgQIECBAgAABAgQIECBAoGQBAWjJ4KYjQIAAAQIECBAgQIAAAQIECBAgQKA8AQFoedZmIkCAAAECBAgQIECAAAECBAgQIECgZAEBaMngpiNAgAABAgQIECBAgAABAgQIECBAoDwBAWh51mYiQIAAAQIECBAgQIAAAQIECBAgQKBkAQFoyeCmI0CAAAECBAgQIECAAAECBAgQIECgPAEBaHnWZiJAgAABAgQIECBAgAABAgQIECBAoGQBAWjJ4KYjQIAAAQIECBAgQIAAAQIECBAgQKA8AQFoedZmIkCAAAECBAgQIECAAAECBAgQIECgZIEhJc9nui0IrFu3Lmy77bbdrq5evTo89NBDYebMmeGNN94IBx98cDj77LPDqFGjut3nDQECBAgQIECAAAECBAgQIECAAAECvQsIQHt3Ke3sPffcE2655ZawcuXK8Oijj9bn3bBhQzj++OPDI488Uj83Y8aMcN1114XZs2eHgw46qH7eAQECBAgQIECAAAECBAgQIECAAAECvQsIQHt3KeXs7bffHk477bRsrp133rnbnJdcckm38LPr4ocffhi++93vhrlz54aRI0d2nfYvAQIECBAgQIAAAQIECBAgQIAAAQK9CPgboL2glHGq9pH2c845pz7VsGHDQmdnZ/Z+1apV4frrr8+OOzo6wi9/+cswf/78MGXKlDBkyJDw2muvhXPPPbc+1gEBAgQIECBAgAABAgQIECBAgAABAr0L+A3Q3l1afnb69OnZx95rE1199dXhvPPOy8LN2vvax+LXrl1bOwwnnHBC+OlPf5odf+lLX8rOT548OcyaNSs7538IECBAgAABAgQIECBAgAABAgQIENiygN8A3bJNS68sWLAge/4Xv/jFMHHixFD7DdCu1/333991GE499dT6ce3grLPOyt6//fbbYenSpd2ueUOAAAECBAgQIECAAAECBAgQIECAQHcBAWh3j9LedQWgxxxzTLc5a19+9OCDD2bnBg0aFI4++uhu13ffffcwdOjQ7NwzzzzT7Zo3BAgQIECAAAECBAgQIECAAAECBAh0FxCAdvco7d0//vGPbK4DDjig25xz5swJy5cvz84dcsghYccdd+x2vRaQ1n5qr66/GdrtBm8IECBAgAABAgQIECBAgAABAgQIEKgLCEDrFOUejB49OpvwX//6V7eJZ86cWX//rW99q37cdbBo0aKwcePG7O2ee+7Zddq/BAgQIECAAAECBAgQIECAAAECBAj0IiAA7QWljFNjxozJprn33nvr061fvz784Q9/qL8/9thj68ddB9dee212WPt2+M9+9rNdp/1LgAABAgQIECBAgAABAgQIECBAgEAvAgLQXlDKOHXKKadk08yePTv7BvhHH300/PCHPwwvv/xydn7fffcNhx56aL2UVatWZV+WdPPNN2fnTjzxxPDpT3+6ft0BAQIECBAgQIAAAQIECBAgQIAAAQI9BYb0POVMGQITJkwI+++/f3jhhRfCb37zm+yna97BgweHqVOndr3NvhTpuOOOCx999FF2rvblSJMmTapfd0CAAAECBAgQIECAAAECBAgQIECAQO8CfgO0d5eWn62FnLNmzQrjxo3rNlfto+21QPQ/P/6+00471cPPESNGhLvvvjuMHTu22zhvCBAgQIAAAQIECBAgQIAAAQIECBDoKeA3QHualHbmM5/5THjsscfC008/HR5//PH/b+9OwOSo6gSAv5BEEAnhkiOA3DdIXEAuRW4I6sqCiyiICG4UvBAWUGEBFUE5FYH1QEAXUdRPXAVBRBcF5A7hkgTkkhjkCHc0KNBb/9qt+npmumemJz1JV/fvfd/Q1VWvqt/7vXpM5z+v3kuTJk1Ku+66a4qAZ32Kx+FjztAYNXrwwQfn2/XHbRMgQIAAAQIECBAgQIAAAQIECBAg0FhAALSxywLbO27cuLTVVlvlP80+dPHFF0+x+rtEgAABAgQIECBAgAABAgQIECBAgEBrAh6Bb81LbgIECBAgQIAAAQIECBAgQIAAAQIEKiRgBGiHNFatVstHec6YMSPNnDkzPfLII2nixIn54/Dx+PvOO++cFltssQ4prWIQIECAAAECBAgQIECAAAECBAgQqIaAAGgHtNO0adPSIYcckm6++eampZkwYULad99906mnnpoHRptmdIAAAQIECBAgQIAAAQIECBAgQIAAgVLAI/AlxcLZOPLII9MWW2wxaPAzSvbCCy+kb33rW2ny5Mn5CNGFU1qfSoAAAQIECBAgQIAAAQIECBAgQKBaAkaALsT2uuiii9Jpp51WlmCDDTZIU6ZMSWussUZaZZVV0pw5c9LDDz+c7rzzzvTzn/88xWPy8X7vvffOA6axOJJEgAABAgQIECBAgAABAgQIECBAgEBzAQHQ5jajemT27NnpE5/4RP4ZSy65ZDrzzDPTBz7wgTR27NiGn3vXXXfl+a+55pp0zz335IHT4447rmFeOwkQIECAAAECBAgQIECAAAECBAgQ+D8Bj8AvpDvh29/+dnrmmWfyTz///PPTQQcd1DT4GZk22WST9LOf/Sytu+66+TnnnXdeevXVV/Nt/yFAgAABAgQIECBAgAABAgQIECBAoLGAAGhjl1HfG4+1R9ptt93yR9qH84GxENLpp5+eZ3300UfTH/7wh+GcJg8BAgQIECBAgAABAgQIECBAgACBnhUQAF1ITV8EQLfZZpuWSrD11luX+R955JFy2wYBAgQIECBAgAABAgQIECBAgAABAgMFBEAHmiyQPc8991z+ORMnTmzp85ZYYok0btz/Td368ssvt3SuzAQIECBAgAABAgQIECBAgAABAgR6TUAAdCG1+Prrr59/8m233dZSCe64445UBD433njjls6VmQABAgQIECBAgAABAgQIECBAgECvCQiALqQW33DDDfNPjoWNHnrooWGX4itf+UqeN0aCrrnmmsM+T0YCBAgQIECAAAECBAgQIECAAAECvSggALqQWv2AAw5IY8aMSfEo/D777JMef/zxQUsSK76fcsop6fvf/36eb4899sjPH/QkBwkQIECAAAECBAgQIECAAAECBAj0uIAA6EK6Abbaaqu0//77559+6623prXWWisdc8wx6fe//32aPXt2qtVq6YUXXkh33XVXuvjii9PkyZPT0Ucfnedfbrnl0llnnbWQSu5jCRAgQIAAAQIECBAgQIAAAQIECFRH4P9W06lOebuqpKeeemqaOXNmuvnmm9PcuXPTSSedlP9EJWOho2Kuz/pKjx07Nn39619PK6ywQv1u2wQIECBAgAABAgQIECBAgAABAgQINBAwArQByoLaFUHMGPF54oknpvHjx/f52EbBz+222y5NmzYt7b333n3yekOAAAECBAgQIECAAAECBAgQIECAQGMBI0AbuyywvTGiMx5932uvvdLVV1+dZsyYke6999503333pWWWWSats846+c/WW2+d3vWudy2wcvkgAgQIECBAgAABAgQIECBAgAABAt0gIADaIa24wQYbpPiRCBAgQIAAAQIECBAgQIAAAQIECBBon4BH4Ntn6UoECBAgQIAAAQIECBAgQIAAAQIECHSYgBGgC7BB4tH2yy67LN1www3plltuyR9x33jjjdP222+fDjrooBSPw0sECBAgQIAAAQIECBAgQIAAAQIECLRPQAC0fZaDXuniiy9OBx98cJo3b16Zb9asWenOO+9McSxWdv/mN7+ZNttss/K4DQIECBAgQIAAAQIECBAgQIAAAQIE5k/AI/Dz5zess08//fS033779Ql+9j8xVnffZZdd0pw5c/of8p4AAQIECBAgQIAAAQIECBAgQIAAgREKCICOEG64p8WIzxNPPLHMvsYaa6TDDjssXXXVVenyyy9Pxx57bFpsscXy488880z+vsxsgwABAgQIECBAgAABAgQIECBAgACB+RLwCPx88Q198k9/+tP07LPP5hlXX331NH369LTkkkuWJ+6xxx7pPe95T9piiy3yEaLf+ta30lFHHZUiUCoRIECAAAECBAgQIECAAAECBAgQIDB/AkaAzp/fkGf/+Mc/LvNcdNFFfYKfxYFYCGnq1Kn521deeSXdfffdxSGvBAgQIECAAAECBAgQIECAAAECBAjMh4AA6HzgDefUBx98MM+24oorpm233bbpKXvvvXd57OGHHy63bRAgQIAAAQIECBAgQIAAAQIECBAgMHIBAdCR2w3rzOLx92WXXXbQ/Kusskp5/JFHHim3bRAgQIAAAQIECBAgQIAAAQIECBAgMHIBAdCR2w3rzJdeeinPt+iiiw6af9KkSeXxRx99tNy2QYAAAQIECBAgQIAAAQIECBAgQIDAyAUEQEduN6wzX3311TzfmDFjBs0/fvz48ngRNC132CBAgAABAgQIECBAgAABAgQIECBAYEQCAqAjYnMSAQIECBAgQIAAAQIECBAgQIAAAQJVEBAArUIrKSMBAgQIECBAgAABAgQIECBAgAABAiMSEAAdEZuTCBAgQIAAAQIECBAgQIAAAQIECBCogoAAaBVaSRkJECBAgAABAgQIECBAgAABAgQIEBiRwLgRneWklgUee+yxdMIJJzQ9r1arlcdmzpw5aN4i42DXK/J4JUCAAAECBAgQIECAAAECBAgQINDLAgKgC6j1Z8+enT73uc8N69NmzJgxrLwCoMPilIkAAQIECBAgQIAAAQIECBAgQKCHBTwC38ONr+oECBAgQIAAAQIECBAgQIAAAQIEul3ACNBRbuGPfexj6cUXXxzlT3F5AgQIECBAgAABAgQIECBAgAABAgQaCQiANlJp475jjjmmjVdzKQIECBAgQIAAAQIECBAgQIAAAQIEWhHwCHwrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjWXwhIgQIAAAQIECBAgQIAAAQIECBAg0IqAAGgrWvISIECAAAECBAgQIECAAAECBAgQIFApAQHQSjVXbxV27NixeYUXWcRt2lstr7YECBAgQIAAAQIECBAgQIAAgfYJjGvfpVyJQHsFDjzwwDRv3ry0++67t/fCrkaAAAECBAgQIECAAAECBAgQINAzAmNqWeqZ2qooAQIECBAgQIAAAQIECBAgQIAAAQI9JeDZ4p5qbpUlQIAAAQIECBAgQIAAAQIECBAg0FsCAqC91d5qS4AAAQIECBAgQIAAAQIECBAgQKCnBARAe6q5VZYAAQIECBAgQIAAAQIECBAgQIBAbwkIgPZWe6stAQIECBAgQIAAAQIECBAgQIAAgZ4SEADtqeZWWQIECBAgQIAAAQIECBAgQIAAAQK9JSAA2lvtrbYECBAgQIAAAQIECBAgQIAAAQIEekpAALSnmltlCRAgQIAAAQIECBAgQIAAAQIECPSWgABob7W32hIgQIAAAQIECBAgQIAAAQIECBDoKQEB0J5qbpUlQIAAAQIECBAgQIAAAQIECBAg0FsCAqC91d5qS4AAAQIECBAgQIAAAQIECBAgQKCnBARAe6q5VZYAAQIECBAgQIAAAQIECBAgQIBAbwkIgPZWe6stAQIECBAgQIAAAQIECBAgQIAAgZ4SEADtqeZWWQIECBAgQIAAAQIECBAgQIAAAQK9JSAA2lvtrbYECBAgQIAAAQIECBAgQIAAAQIEekpAALSnmltlCRAgQIAAAQIECBAgQIAAAQIECPSWgABob7W32hIgQIAAAQIECBAgQIAAAQIECBDoKQEB0J5qbpUlQIAAAQIECBAgQIAAAQIECBAg0FsCAqC91d5qS4AAAQIECBAgQIAAAQIECBAgQKCnBARAe6q5VZYAAQIECBAgQIAAAQIECBAgQIBAbwmM663qqm2VBE444YR0yimnpJVWWim95jWvqVLRlZXAqAk8//zz6ZlnnkmTJk1K48ePH7XPcWECVRJ47rnn0rPPPptWXnnlNG6crzZVajtlHT2B+F3xwgsv5P1i7Nixo/dBrkygQgJz5sxJc+fOTausskpaZBFjgSrUdIo6igJPPfVU3h8eeuihtPjii4/iJ7k0gYUrMKaWpYVbBJ9OoLHA5ptvnm677bbGB+0lQIAAAQIECBAgQIAAAQIE2iIwffr0tOmmm7blWi5CoBMFDJPoxFZRplwg/ucbAdAvfOEL6d3vfjcVAgQygU996lPpyiuvTGeccUaaMmUKEwIEMoGpU6ema6+9Nn3jG99I2223HRMCBDKB/fbbL02bNi1ddNFFabPNNmNCgEAmsOeee6aZM2emSy+9NK2//vpMCBDIBHbZZZc0a9asNGHCBB4EulpAALSrm7falRszZkxegXgE3heUarel0rdPYMkll8wvFo/66hftc3WlagssscQSeQVWXXVV/aLaTan0bRQoHmNcbbXV9Is2urpUtQUWW2yxvAJrrLGGflHtplT6NgqYbq6NmC7V0QImPuno5lE4AgQIECBAgAABAgQIECBAgAABAgTmR0AAdH70nEuAAAECBAgQIECAAAECBAgQIECAQEcLCIB2dPMoHAECBAgQIECAAAECBAgQIECAAAEC8yMgADo/es4lQIAAAQIECBAgQIAAAQIECBAgQKCjBQRAO7p5FI4AAQIECBAgQIAAAQIECBAgQIAAgfkREACdHz3nEiBAgAABAgQIECBAgAABAgQIECDQ0QICoB3dPApHgAABAgQIECBAgAABAgQIECBAgMD8CAiAzo+ecwkQIECAAAECBAgQIECAAAECBAgQ6GgBAdCObh6FI0CAAAECBAgQIECAAAECBAgQIEBgfgQEQOdHz7kECBAgQIAAAQIECBAgQIAAAQIECHS0gABoRzePwhEgQIAAAQIECBAgQIAAAQIECBAgMD8CAqDzo+dcAgQIECBAgAABAgQIECBAgAABAgQ6WkAAtKObR+EIECBAgAABAgQIECBAgAABAgQIEJgfAQHQ+dFzLgECBAgQIECAAAECBAgQIECAAAECHS0gANrRzaNwBAgQIECAAAECBAgQIECAAAECBAjMj4AA6PzoOZcAAQIECBAgQIAAAQIECBAgQIAAgY4WEADt6Obp7cJNnDgxB1hyySV7G0LtCdQJ6Bd1GDYJ/L+AfuFWIDBQQL8YaGIPgaJfTJgwAQYBAv8vEP1ikUUWSUsssQQTAl0tMKaWpa6uocpVVuD5559P1157bZoyZUr+P+TKVkTBCbRR4Omnn0433XRT2n333dOYMWPaeGWXIlBdgSeeeCJNnz497brrrtWthJITaLPA7Nmz04wZM9KOO+7Y5iu7HIHqCvzpT39KDz/8cNpuu+2qWwklJ9BmgQcffDD95S9/Sdtss02br+xyBDpLQAC0s9pDaQgQIECAAAECBAgQIECAAAECBAgQaKOAR+DbiOlSBAgQIECAAAECBAgQIECAAAECBAh0loAAaGe1h9IQIECAAAECBAgQIECAAAECBAgQINBGAQHQNmK6FAECBAgQIECAAAECBAgQIECAAAECnSUgANpZ7aE0BAgQIECAAAECBAgQIECAAAECBAi0UUAAtI2YLkWAAAECBAgQIECAAAECBAgQIECAQGcJCIB2VnsoDQECBAgQIECAAAECBAgQIECAAAECbRQQAG0jpksRIECAAAECBAgQIECAAAECBAgQINBZAgKgndUeSkOAAAECBAgQIECAAAECBAgQIECAQBsFBEDbiOlSBAgQIECAAAECBAgQIECAAAECBAh0loAAaGe1h9IQIECAAAECBAgQIECAAAECBAgQINBGAQHQNmK6FAECBAgQIECAAAECBAgQIECAAAECnSUgANpZ7aE0BAgQIECAAAECBAgQIECAAAECBAi0UUAAtI2YLkWAAAECBAgQIECAAAECBAgQIECAQGcJCIB2VnsoDQECBAgQIECAAAECBAgQIECAAAECbRQQAG0jpksRIECAAAECBAgQIECAAAECBAgQINBZAgKgndUeSkOAAAECBAgQIECAAAECBAgQIECAQBsFBEDbiOlSBAgQIECAAAECBAgQIECAAAECBAh0loAAaGe1h9IQIECAAAECBAgQIECAAAECBAgQINBGAQHQNmK6FAECBAgQIECAAAECBAgQIECAAAECnSUgANpZ7aE0BAgQIECAAAECBAgQIECAAAECBAi0UUAAtI2YLkWAAAECBAgQIECAAAECBAgQIECAQGcJCIB2VnsoDQECBAgQIECAAAECBAgQIECAAAECbRQQAG0jpksRIECAAAECBAgQIECAAAECBAgQINBZAgKgndUeSkOAAAECBAgQIECAAAECBAgQIECAQBsFBEDbiOlSBAgQIECAAAECBAgQIECAAAECBAh0lsC4ziqO0vS6wAMPPJBOPvnkdNttt6XYXmWVVdI222yTtt1227TPPvuk173udb1OpP49IDBlypR05ZVXpq997WvpYx/72LBqrO8Mi0mmighcfvnl6eKLL073339//vOa17wmrbfeemmDDTZIhxxySJo8efKwaqJfDItJpooI/PSnP03f+c530owZM9LDDz+clltuubTRRhul/fbbL73vfe9LY8eOHVZN9IthMclUYYFzzz03ff7zn89rcN1116W11157yNroF0MSyVABgVdffTX/t0O8DifFv6933HHHpln1i6Y0DlRVoCYR6BCBU089tTZ+/Pha1pca/my99da1p59+ukNKqxgERkfgnHPOKe//LAA6rA/Rd4bFJFMFBLIv2rWdd9657AONfh9kQZ7aJz7xidqLL744aI30i0F5HKyQwF/+8pfa9ttvP2i/eOc731n761//OmSt9IshiWSouMA999xTW2yxxcr+cu+99w5ZI/1iSCIZKiIQ93uj707N9p155plNa6ZfNKVxoMICY6LsWYeQCCxUgQsuuCAddNBBeRmyLy3pPe95T8oCnunRRx9Nl112WbrjjjvyY5tsskn61a9+lVZYYYWFWl4fTmA0BGLE2/vf//5U/NV2OCNA9Z3RaAnXXBgC8+bNS29+85vTXXfdlX/88ssvn49s23DDDVMW2MmfDIg+8vLLL+fHDzjggHw0XKOy6heNVOyrosA//vGPtMMOO6Trr78+L/6qq66aDj744HxE26xZs9L3v//98jtSPC3z85//PC299NINq6pfNGSxs4sE/v73v6ctt9wyTZ8+vaxVFhBK66+/fvm+/4Z+0V/E+yoLxO+EeCJguCkLgKbDDjtsQHb9YgCJHd0iUOHgraJ3icATTzxRe+1rX5v/tWrixIm1a665pk/Nsi8ztX333bf8a9ahhx7a57g3BKouEKN2jjzyyFqMbMt+t5Q/Q40A1Xeq3vLKXy/w0Y9+tLz3d9ttt9qcOXPqD+fb2T9qa9kfwMp8P/rRjwbk0S8GkNhRYYFjjz22vN+zxxRrL7zwQp/aZAHSWvbHgDLP1KlT+xwv3ugXhYTXbhaI71L136Nie7ARoPpFN98NvVm3o446quwD2XRatccee2zQn7lz5w6A0i8GkNjRRQKpi+qiKhUV+OxnP1v+j/rrX/96w1q88sortS222CLPt8QSS9Sef/75hvnsJFA1gd/+9re1ddZZp+wD9V/chwqA6jtVa23lbSYQ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BAgQIECAAAECBAgQIECAAAECBDpRQAC0E1tFmQgQIECAAAECBAgQIECAAAECBAgQaIuAAGhbGF2EAAECBAgQIECAAAECBAgQIECAAIFOFBAA7cRWUSYCBAgQIECAAAECBAgQIECAAAECBNoiIADaFkYXIUCAAAECBAgQIECAAAECBAgQIECgEwUEQDuxVZSJAAECBAgQIECAAAECBAgQIECAAIG2CAiAtoXRRQgQIECAAAECBAgQIECAAAECBAgQ6EQBAdBObBVlIkCAAAECBAgQIECAAAECBAgQIECgLQICoG1hdBECBAgQIECAAAECBAgQIECAAAECBDpRQAC0E1tFmQgQIECAAAECBAgQIECAAAECBAgQaIuAAGhbGF2EAAECBAgQIECAAAECBAgQIECAAIFOFBAA7cRWUSYCBAgQIECAAAECBAgQIECAAAECBNoiIADaFkYXIUCAAAECBAgQIECAAAECBAgQIECgEwUEQDuxVZSJAAECBAgQIECAAAECBAgQIECAAIG2CAiAtoXRRQgQIECAAAECBAgQIECAAAECBAgQ6EQBAdBObBVlIkCAAAECBAgQIECAAAECBAgQIECgLQICoG1hdBECBAgQIECAAAECBAgQIECAAAECBDpRQAC0E1tFmQgQIECAAAECBAgQIECAAAECBAgQaIuAAGhbGF2EAAECBAgQIECAAAECBAgQIECAAIFOFBAA7cRWUSYCBAgQIECAAAECBAgQIECAAAECBNoiIADaFkYXIUCAAAECFbJ6tgAAHWhJREFUBAgQIECAAAECBAgQIECgEwUEQDuxVZSJAAECBAgQIECAAAECBAgQIECAAIG2CAiAtoXRRQgQIECAAAECBAgQIECAAAECBAgQ6EQBAdBObBVlIkCAAAECBAgQIECAAAECBAgQIECgLQICoG1hdBECBAgQIECAAAECBAgQIECAAAECBDpRQAC0E1tFmQgQIECAAAECBAgQIECAAAECBAgQaIuAAGhbGF2EAAECBAgQIECAAAECBAgQIECAAIFOFBAA7cRWUSYCBAgQIECAAAECBAgQIECAAAECBNoiIADaFkYXIUCAAAECBAgQIECAAAECBAgQIECgEwUEQDuxVZSJAAECBAgQIECAAAECBAgQIECAAIG2CAiAtoXRRQgQIECAAAECBAgQIECAAAECBAgQ6EQBAdBObBVlIkCAAAECBAgQIECAAAECBAgQIECgLQICoG1hdBECBAgQIECAAAECBAgQIECAAAECBDpRQAC0E1tFmQgQIECAAAECBAgQIECAAAECBAgQaIuAAGhbGF2EAAECBAgQIECAAAECBAgQIECAAIFOFBAA7cRWUSYCBAgQIECAAAECBAgQIECAAAECBNoiIADaFkYXIUCAAAECBAgQIECAAAECBAgQIECgEwUEQDuxVZSJAAECBAgQIECAAAECBAgQIECAAIG2CAiAtoXRRQgQIECAAAECBAgQIECAAAECBAgQ6EQBAdBObBVlIkCAAAECBAgQIECAAAECBAgQIECgLQICoG1hdBECBAgQIECAAAECBAgQIECAAAECBDpRQAC0E1tFmQgQIECAAAECBAgQIECAAAECBAgQaIuAAGhbGF2EAAECBAgQIECAAAECBAgQIECAAIFOFBAA7cRWUSYCBAgQIECAAAECBAgQIECAAAECBNoiIADaFkYXIUCAAAECBAgQIECAAAECBAgQIECgEwUEQDuxVZSJAAECBAgQIECAAAECBAgQIECAAIG2CAiAtoXRRQgQIECAAAECBAgQIECAAAECBAgQ6EQBAdBObBVlIkCAAAECBAgQIECAAAECBAgQIECgLQICoG1hdBECBAgQIECAAAECBAgQIECAAAECBDpRYFwnFkqZCBAgQIAAAQIECPSCwP33359mzZqVFl100bTyyiunSZMmpfHjx/dC1dWRAAECBAgQILDABIwAXWDUPogAAQIECBComsBXvvKVtOKKKw75s9JKK6V11lknbbbZZuntb397OvHEE9Ndd921QKq71lpr5eXbeuutR/3zHn744Yafcckll5RG3/rWtxrmqcLOBVmP++67L73xjW9M6667btpxxx3Ttttum1ZfffV03nnnpQXZplVoF2UkQIAAAQIECMyvgBGg8yvofAIECBAgQKBrBebOnZsef/zxluv3i1/8Ih1//PHp0EMPTV/96lfTIouM3t+cn3jiifTiiy+mCRMmtFzO4Z4QDl/4whfSd7/73TR79uwBp82bN690+utf/zrgeFV2LKh6vPDCC2nPPfdM99577wCajTfeOC2INh3wwXYQIECAAAECBLpYQAC0ixtX1QgQIECAAIH2CWy00UZpiy22aHjBWq2WnnzyyfSnP/0pD2q98sor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AgQIECBAgAABAgQIEOhtAQHQ3m5/tSdAgAABAgQIECBAgAABAgQIECDQ1QICoF3dvCpHgAABAgQIECBAgAABAgQIECBAoLcFBEB7u/3VngABAgQIECBAgAABAgQIECBAgEBXCwiAdnXzqhwBAgQIECBAgAABAgQIECBAgACB3hYQAO3t9ld7AgQIECBAgAABAgQIECBAgAABAl0tIADa1c2rcgQIECBAgAABAgQIECBAgAABAgR6W0AAtLfbX+0JECBAgAABAgQIECBAgAABAgQIdLWAAGhXN6/KESBAgAABAgQIECBAgAABAgQIEOhtAQHQ3m5/tSdAgAABAgQIECBAgAABAgQIECDQ1QICoF3dvCpHgAABAgQIECBAgAABAgQIECBAoLcFBEB7u/3VngABAgQIECBAgAABAgQIECBAgEBXCwiAdnXzqhwBAgQIECBAgAABAgQIECBAgACB3hYQAO3t9ld7AgQIECBAgAABAgQIECBAgAABAl0tIADa1c2rcgQIECBAgAABAgQIECBAgAABAgR6W0AAtLfbX+0JECBAgAABAgQIECBAgAABAgQIdLWAAGhXN6/KESBAgAABAgQIECBAgAABAgQIEOhtAQHQ3m5/tSdAgAABAgQIECBAgAABAgQIECDQ1QICoF3dvCpHgAABAgQIECBAgAABAgQIECBAoLcFBEB7u/3VngABAgQIECBAgAABAgQIECBAgEBXCwiAdnXzqhwBAgQIECBAgAABAgQIECBAgACB3hYQAO3t9ld7AgQIECBAgAABAgQIECBAgAABAl0tIADa1c2rcgQIECBAgAABAgQIECBAgAABAgR6W0AAtLfbX+0JECBAgAABAgQIECBAgAABAgQIdLWAAGhXN6/KESBAgAABAgQIECBAgAABAgQIEOhtAQHQ3m5/tSdAgAABAgQIECBAgAABAgQIECDQ1QICoF3dvCpHgAABAgQIECBAgAABAgQIECBAoLcFBEB7u/3VngABAgQIECBAgAABAgQIECBAgEBXCwiAdnXzqhwBAgQIECBAgAABAgQIECBAgACB3hYQAO3t9ld7AgQIECBAgAABAgQIECBAgAABAl0tIADa1c2rcgQIECBAgAABAgQIECBAgAABAgR6W0AAtLfbX+0JECBAgAABAgQIECBAgAABAgQIdLWAAGhXN6/KESBAgAABAgQIECBAgAABAgQIEOhtgf8FIQ4Cyd6XWncAAAAASUVORK5CYII=" width="672" /></p>
 <pre><code>##       var  rel.inf
 ## Tm     Tm 55.31568
 ## Pick Pick 44.68432
 ## Pos   Pos  0.00000</code></pre>
-<p>The summaries tell us how much influence each variable had on the model. It was interesting to see that position had such absolutely zero influence in predicting the model. This tells us that quarterbacks, wide receivers, or running backs do not have a leg up on each other for the MVP award!</p>
-<p>What is even more interesting is that the team the player was drafted to seemed to influence the model more than the pick number itself! Before I had trained the model, I expected pick, position, and then team to have relative influence in that order!</p>
+<p>The summaries tell us how much relative influence each variable had on the model. It was interesting to see that position had such absolutely zero influence in predicting the model. This tells us that quarterbacks, wide receivers, or running backs do not have a leg up on each other for the MVP award!</p>
+<p>What is even more interesting is that the team the player was drafted to seemed to influence the model more than the pick number itself! Before I had trained the model, I expected pick, position, and then team to have relative influence in that order.</p>
 </div>
 <div id="testing-against-2017-2019-data" class="section level1">
 <h1>Testing against 2017-2019 data</h1>
@@ -687,34 +1070,189 @@ model &lt;- train(off_df[,predictor_names], off_df[,outcome_name],
 <h1>Predicting the 2020 Rookie Offensive MVP</h1>
 <p>Now let’s use the model to predict the probabilities that each player from the 2020 draft will become Offensive Rookie of the Year. This code will give us the probability that the model is sure about its choice that the observation will fall under the “No” and “Yes” category.</p>
 <pre class="r"><code>predictions &lt;- predict(object=model, df_2020[,predictor_names], type='prob')
-head(predictions)</code></pre>
-<pre><code>##          No        Yes
-## 1 0.7884537 0.21154634
-## 2 0.9124603 0.08753973
-## 3 0.9696058 0.03039424
-## 4 0.9651014 0.03489863
-## 5 0.9377729 0.06222711
-## 6 0.9482607 0.05173934</code></pre>
+kable(head(predictions))</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="right">No</th>
+<th align="right">Yes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">0.7884537</td>
+<td align="right">0.2115463</td>
+</tr>
+<tr class="even">
+<td align="right">0.9124603</td>
+<td align="right">0.0875397</td>
+</tr>
+<tr class="odd">
+<td align="right">0.9696058</td>
+<td align="right">0.0303942</td>
+</tr>
+<tr class="even">
+<td align="right">0.9651014</td>
+<td align="right">0.0348986</td>
+</tr>
+<tr class="odd">
+<td align="right">0.9377729</td>
+<td align="right">0.0622271</td>
+</tr>
+<tr class="even">
+<td align="right">0.9482607</td>
+<td align="right">0.0517393</td>
+</tr>
+</tbody>
+</table>
 <p>Now let’s join our prediction probabilities to the actual data, so we can look at the prediction probabilities for each player.</p>
 <pre class="r"><code>df_2020 &lt;- merge(df_2020, predictions, by = &quot;row.names&quot;, all.x = FALSE, all.y = FALSE)
 df_2020$No.x &lt;- NULL</code></pre>
-<p>Now let’s get the top 7 players that the model is most certain will be the Offensive Rookie of the Year</p>
+<p>Now let’s get the top 10 players that the model is most certain will be the Offensive Rookie of the Year</p>
 <pre class="r"><code>top10_roty &lt;- df_2020 %&gt;%
   top_n(10, Yes)
 
-top10_roty</code></pre>
-<pre><code>##    Row.names Rnd Pick  Tm           Player Pos Age year        No        Yes
-## 1          1   1    1 CIN       Joe Burrow  QB  23 2016 0.7884537 0.21154634
-## 2         19   2   52 LAR        Cam Akers  RB  21 2016 0.9551433 0.04485668
-## 3          2   1    5 MIA   Tua Tagovailoa  QB  22 2016 0.9124603 0.08753973
-## 4         22   2   57 LAR    Van Jefferson  WR  24 2016 0.9551433 0.04485668
-## 5          4   1   12 VEG  Henry Ruggs III  WR  21 2016 0.9651014 0.03489863
-## 6         49   5  176 MIN      K.J. Osborn  WR  NA 2016 0.9584614 0.04153863
-## 7          5   1   15 DEN      Jerry Jeudy  WR  21 2016 0.9377729 0.06222711
-## 8          6   1   17 DAL      CeeDee Lamb  WR  21 2016 0.9482607 0.05173934
-## 9         63   7  244 MIN     Nate Stanley  QB  NA 2016 0.9584614 0.04153863
-## 10         8   1   22 MIN Justin Jefferson  WR  21 2016 0.9311832 0.06881675</code></pre>
-<p>Joe Burrow is our model’s top prediction to win the MVP!!! We also see that Cam Akers, Tua, Henry Ruggs III, Jerry Jeudy, CeDee Lamb, and Justin Jefferson also appear in the top 10. All of these players currently have the highest odds to win the the Offensive MVP according to OddsShark.</p>
+kable(top10_roty)</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Row.names</th>
+<th align="left">Rnd</th>
+<th align="right">Pick</th>
+<th align="left">Tm</th>
+<th align="left">Player</th>
+<th align="left">Pos</th>
+<th align="right">Age</th>
+<th align="right">year</th>
+<th align="right">No</th>
+<th align="right">Yes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="left">1</td>
+<td align="right">1</td>
+<td align="left">CIN</td>
+<td align="left">Joe Burrow</td>
+<td align="left">QB</td>
+<td align="right">23</td>
+<td align="right">2016</td>
+<td align="right">0.7884537</td>
+<td align="right">0.2115463</td>
+</tr>
+<tr class="even">
+<td align="left">19</td>
+<td align="left">2</td>
+<td align="right">52</td>
+<td align="left">LAR</td>
+<td align="left">Cam Akers</td>
+<td align="left">RB</td>
+<td align="right">21</td>
+<td align="right">2016</td>
+<td align="right">0.9551433</td>
+<td align="right">0.0448567</td>
+</tr>
+<tr class="odd">
+<td align="left">2</td>
+<td align="left">1</td>
+<td align="right">5</td>
+<td align="left">MIA</td>
+<td align="left">Tua Tagovailoa</td>
+<td align="left">QB</td>
+<td align="right">22</td>
+<td align="right">2016</td>
+<td align="right">0.9124603</td>
+<td align="right">0.0875397</td>
+</tr>
+<tr class="even">
+<td align="left">22</td>
+<td align="left">2</td>
+<td align="right">57</td>
+<td align="left">LAR</td>
+<td align="left">Van Jefferson</td>
+<td align="left">WR</td>
+<td align="right">24</td>
+<td align="right">2016</td>
+<td align="right">0.9551433</td>
+<td align="right">0.0448567</td>
+</tr>
+<tr class="odd">
+<td align="left">4</td>
+<td align="left">1</td>
+<td align="right">12</td>
+<td align="left">VEG</td>
+<td align="left">Henry Ruggs III</td>
+<td align="left">WR</td>
+<td align="right">21</td>
+<td align="right">2016</td>
+<td align="right">0.9651014</td>
+<td align="right">0.0348986</td>
+</tr>
+<tr class="even">
+<td align="left">49</td>
+<td align="left">5</td>
+<td align="right">176</td>
+<td align="left">MIN</td>
+<td align="left">K.J. Osborn</td>
+<td align="left">WR</td>
+<td align="right">NA</td>
+<td align="right">2016</td>
+<td align="right">0.9584614</td>
+<td align="right">0.0415386</td>
+</tr>
+<tr class="odd">
+<td align="left">5</td>
+<td align="left">1</td>
+<td align="right">15</td>
+<td align="left">DEN</td>
+<td align="left">Jerry Jeudy</td>
+<td align="left">WR</td>
+<td align="right">21</td>
+<td align="right">2016</td>
+<td align="right">0.9377729</td>
+<td align="right">0.0622271</td>
+</tr>
+<tr class="even">
+<td align="left">6</td>
+<td align="left">1</td>
+<td align="right">17</td>
+<td align="left">DAL</td>
+<td align="left">CeeDee Lamb</td>
+<td align="left">WR</td>
+<td align="right">21</td>
+<td align="right">2016</td>
+<td align="right">0.9482607</td>
+<td align="right">0.0517393</td>
+</tr>
+<tr class="odd">
+<td align="left">63</td>
+<td align="left">7</td>
+<td align="right">244</td>
+<td align="left">MIN</td>
+<td align="left">Nate Stanley</td>
+<td align="left">QB</td>
+<td align="right">NA</td>
+<td align="right">2016</td>
+<td align="right">0.9584614</td>
+<td align="right">0.0415386</td>
+</tr>
+<tr class="even">
+<td align="left">8</td>
+<td align="left">1</td>
+<td align="right">22</td>
+<td align="left">MIN</td>
+<td align="left">Justin Jefferson</td>
+<td align="left">WR</td>
+<td align="right">21</td>
+<td align="right">2016</td>
+<td align="right">0.9311832</td>
+<td align="right">0.0688168</td>
+</tr>
+</tbody>
+</table>
+<p>Joe Burrow is our model’s top prediction to win the MVP!!! We also see that Cam Akers, Tua, Henry Ruggs III, Jerry Jeudy, CeDee Lamb, and Justin Jefferson also appear in the top 10. All of these players are among those that have the highest odds to win the the Offensive MVP according to OddsShark.</p>
+<p>Again, it’s important to highlight that we trained this model JUST based on the pick number, team, and position for each player, whereas the Vegas odds have most certainly taken into account the player’s performance in college as well.</p>
 </div>
 
 
