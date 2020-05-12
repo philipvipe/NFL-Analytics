@@ -110,7 +110,7 @@ for (year in 2017:2019){
 
 ```
 
-Next we will scrape the AP Offensive Rookie of the Year Winners from the same website, again for our machine learning problem.
+Next we will scrape the AP Offensive Rookie of the Year Winners from the same website, again for our machine learning problem, and save into the *roty_df* dataframe.
 
 ```{r scrape_ROTY}
 
@@ -124,8 +124,7 @@ roty_df <- draft_html %>%
 
 # Part 2: Data Processing and Preparation
 
-Load the NFL draft history data from *master_df*, containing the draft data from rounds 1-7 from the 1970-2016 NFL draft. Remove all of the missing data entries, and convert the necessary columns to integers. 
-
+Load the NFL draft history data from *master_df*, containing the draft data from rounds 1-7 from the 1970-2016 NFL draft. We will only keep the observations that do not have any missing data entries. Also, we will convert the necessary columns to integers and factors (rather than chars). This way, we can use the columns values to group and to produce regression lines in our data visualization steps later.
     
 ```{r process_master}
 
@@ -175,7 +174,7 @@ Our *master_df* dataframe now has entities for each player with the following va
     
     year: Year drafted
 
-Now let's process our 2020 Draft data. First, we will get rid of columns we don't care about, then remove blank rows, add year drafted to each observation, and convert the necessary columns to integers, all like we did for the historical draft dataset. We will also filter this dataframe to only include quarterbacks, wide receivers, and running backs.
+Now let's process our 2020 Draft data. First, we will get rid of columns we don't care about, then remove blank rows, add year drafted to each observation, and convert the necessary columns to integers and factors, all like we did for the historical draft dataset. We will also filter this dataframe to only include quarterbacks, wide receivers, and running backs.
 
 ```{r process2020}
 # get rid of the columns we dont care about
@@ -205,7 +204,7 @@ kable(head(df_2020))
 
 So, now our *df_2020* dataframe contains only the offensive skill position players that were drafted in 2020 as entities. The variables of this dataframe are **Rnd**, **Pick**, **Tm**, **Player**, **Pos**, **Age**, and **Year** like we have in our *master_df* variable.
 
-We will process the *test_df* dataframe in the same way.
+We will process the *test_df* dataframe in the same way as the *df_2020* dataframe.
 
 ```{r process_test}
 
@@ -257,8 +256,11 @@ kable(head(off_df))
 
 ## Trends in Average Value
 
+Our first visualization will answer the following questions for us:
 Has average value for players selected in different rounds gone up over time?
 Have GMs gotten better at drafting in the first round, second round, etc...?
+
+To do this, we will plot the average value for all the players for each year since 1970, grouped by round.
 
 ```{r avg_val_rd1}
 
@@ -280,6 +282,8 @@ Seems like GMs have not gotten better at drafting in any of the first four round
 
 Lets analyze the average values of different positions grouped by round and time period in which they were drafted. Let's start with the most important position in football.
 
+So, lets create a bar graph. For each time period, we will graph the average value of a quarterback selected in each round.
+
 ```{r qb}
 qb_bar <- pos_df %>%
   filter(Pos == "QB") %>%
@@ -296,6 +300,9 @@ In the past 20 years (2000-2020), it is much more likely to hit on a QB in the f
 Before then, from 1990-2000, we see that the 6th round was a  value pick for QB, although Tom Brady might be the outlier that is skewing those numbers. But we also see that there was far more value in the second round QB selection from 1980-2000 than in the past 20 years.
 
 Now let's focus our attention on the past 20 years and graph some visualizations of that data.
+
+Our first graph for the 2000s will be the average value of a quarterback on the y-axis, and the pick number in which they were selected on the x-axis.
+
 ```{r qb2}
 
 qb_av_pick <- master_df %>%
@@ -311,6 +318,8 @@ qb_av_pick
 ```
 
 As we would expect the trend is that there is a decline in value until about pick 100, where the career value seems to be about the same from about pick 100-250. This would suggest that seelcting a QB at picks 100-150 would, statistically speaking, provide less bang for your buck, as you could likely get a player of the same quality with some of your later draft capital.
+
+Our next plot will we a violin plot of the average value for quarterbakcs drafted in the 2000s in different rounds. This will give us a better idea of the distribution of the average value for the quarterback position.
 
 ```{r qb3}
 
@@ -331,10 +340,9 @@ However, the distributions reaffirm what we have seen before in our Round 1 QBs.
 
 ## Analyzing the WR and RB
 
-Next we will provide the same graphs to provide similar insight into the RB and WR selections of the draft.
+Next we will provide the same graphs to provide similar insight into the RB and WR selections of the draft. We will use *grid.arrange* to show the graphs side by side in three columns.
 
 It is interesting to note that the general trend has been to select RBs later in the draft, as RBs have always been considered as more expendable than a QB, and there seems to be a notion that you can always get a quality back in the later rounds, and that using first round capital on a RB is a poor management decision.
-
 
 ```{r rb_wr1}
 
@@ -477,7 +485,7 @@ What is even more interesting is that the team the player was drafted to seemed 
 
 ## Testing against 2017-2019 data
 
-Let's test our model against the 2017, 2018, and 2019 datasets. To do this, we will use the *predict()* function in the caret package and feed it the test data. From there,  *predict()* will calculate probabilities that the model is sure about it choice that each observation from *test_df* will fall under the "Yes" and "No" outcome categories. So the "Yes" variable corresponds to the probability the model is sure about its choice that the player will become Rookie MVP, and "No" = probability the model is sure the player will not be the Rookie MVP.
+Let's test our model against the 2017, 2018, and 2019 datasets. To do this, we will use the *predict()* function in the caret package and feed it the test data. From there,  *predict()* will calculate probabilities that the model is sure about it choice that each observation from *test_df* will fall under the "Yes" and "No" outcome categories. So the **Yes** variable corresponds to the probability the model is sure about its choice that the player will become Rookie MVP, and **No** = probability the model is sure the player will not be the Rookie MVP.
 
 ```{r eval_test}
 
@@ -485,7 +493,7 @@ predictions <- predict(object=model, test_df[,predictor_names], type='prob')
 kable(head(predictions))
 ```
 
-Now let's join our prediction probabilities to the actual data, so we can look at the prediction probabilities for each player.
+Now let's join our prediction probabilities to the actual data, so we can look at the prediction probabilities for each player. We will use *merge*, which concatentaes dataframes horizontally. Setting the "by" parameter to "row.names" matches the dataframes by row index.
 
 ```{r join_probabilities_test}
 
@@ -531,7 +539,7 @@ Now let's use the model to predict the probabilities that each player from the 2
 predictions <- predict(object=model, df_2020[,predictor_names], type='prob')
 ```
 
-Now let's join our prediction probabilities to the actual data like we did before. s
+Now let's join our prediction probabilities to the actual data like we did before.
 
 ```{r join_probabilities}
 
@@ -552,6 +560,6 @@ top10_roty <- df_2020 %>%
 kable(top10_roty)
 ```
 
-Joe Burrow is our model's top prediction to win the MVP!!! We also see that Cam Akers, Tua, Henry Ruggs III, Jerry Jeudy, CeDee Lamb, and Justin Jefferson also appear in the top 10. All of these players are among those that have the highest odds to win the the Offensive MVP according to OddsShark.
+**Joe Burrow is our model's top prediction to win the MVP!!!** We also see that Cam Akers, Tua, Henry Ruggs III, Jerry Jeudy, CeDee Lamb, and Justin Jefferson also appear in the top 10. All of these players are among those that have the highest odds to win the the Offensive MVP according to OddsShark.
 
 Again, it's important to highlight that we trained this model JUST based on the pick number, team, and position for each player, whereas the Vegas odds have most certainly taken into account the player's performance in college as well.
