@@ -18,7 +18,7 @@ library(rvest)
 library(gridExtra)
 library(caret)
 library(knitr)
-setwd("/Users/PhilipIpe/Documents/Data Science/Projects/NFL Draft Analytics/")
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 ```
 
 # Part 1: Data Collection
