@@ -305,7 +305,8 @@ qb_av_pick <- master_df %>%
   ggplot(mapping=aes(x=Pick, y=CarAV)) +
     geom_point()  +
     labs(x = "Pick", y = "Career Value", title = "Average Value over picks for QBs Drafted in the 2000s") + 
-    geom_smooth(method='loess')
+    geom_smooth(method='loess') + 
+    geom_smooth(method=lm, color="green")
 
 qb_av_pick
 ```
@@ -372,21 +373,24 @@ qb_av_pick <- master_df %>%
   ggplot(mapping=aes(x=Pick, y=CarAV)) +
     geom_point()  +
     labs(x = "Pick", y = "Career Value", title = "QB Average Value") + 
-    geom_smooth(method='loess')
+    geom_smooth(method='loess') + 
+    geom_smooth(method=lm, color="green")
 
 rb_av_pick <- master_df %>%
   filter(year >= 2000 & Pos == "RB") %>%
   ggplot(mapping=aes(x=Pick, y=CarAV)) +
     geom_point()  +
     labs(x = "Pick", y = "Career Value", title = "RB Average Value") + 
-    geom_smooth(method='loess')
+    geom_smooth(method='loess') + 
+    geom_smooth(method=lm, color="green")
 
 wr_av_pick <- master_df %>%
   filter(year >= 2000 & Pos == "WR") %>%
   ggplot(mapping=aes(x=Pick, y=CarAV)) +
     geom_point()  +
     labs(x = "Pick", y = "Career Value", title = "WR Average Value") + 
-    geom_smooth(method='loess')
+    geom_smooth(method='loess') + 
+    geom_smooth(method=lm, color="green")
 
 grid.arrange(qb_av_pick, rb_av_pick, wr_av_pick, ncol=3, top = "Average Value Over Picks in the 2000s")
 
