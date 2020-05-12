@@ -360,7 +360,7 @@ qb_bar <- pos_df %>%
     geom_bar(stat="identity", position = "dodge") +
     labs(x = "Year", y = "Average Career Value", title = "Average Value for QBs")
 
-grid.arrange(qb_bar, rb_bar, wr_bar, ncol=3, top = "Average Value in Different Rounds over the 2000s")
+grid.arrange(qb_bar, rb_bar, wr_bar, ncol=3, top = "Average Value in Different Rounds in the 2000s")
 ```
 
 Not as drastic of a difference in rounds 1 and 2 in the WR group. The RB average value in the 2000s seems to resemble the QB position.
@@ -402,12 +402,20 @@ Again we see a trend that by pick 100 the value seems to hit a plateue.
 
 ```{r rb_wr3}
 
+qb_violin <- master_df %>%
+  filter(year >= 2000) %>%
+  filter(Pos == "QB") %>%
+  ggplot(mapping=aes(x=factor(Rnd), y=CarAV)) +
+    geom_violin()  +
+    labs(x = "Rnd", y = "Career Value", title = "QB Average Value") + 
+    geom_smooth(method=lm)
+
 rb_violin <- master_df %>%
   filter(year >= 2000) %>%
   filter(Pos == "RB") %>%
   ggplot(mapping=aes(x=factor(Rnd), y=CarAV)) +
     geom_violin()  +
-    labs(x = "Rnd", y = "Career Value", title = "Average Value over Round for RBs") + 
+    labs(x = "Rnd", y = "Career Value", title = "RB Average Value") + 
     geom_smooth(method=lm)
 
 wr_violin <- master_df %>%
@@ -415,10 +423,10 @@ wr_violin <- master_df %>%
   filter(Pos == "WR") %>%
   ggplot(mapping=aes(x=factor(Rnd), y=CarAV)) +
     geom_violin()  +
-    labs(x = "Rnd", y = "Career Value", title = "Average Value over Round for WRs") + 
+    labs(x = "Rnd", y = "Career Value", title = "WR Average Value") + 
     geom_smooth(method=lm)
 
-grid.arrange(qb_violin, rb_violin, wr_violin, ncol=3, top = "Average Value over Round")
+grid.arrange(qb_violin, rb_violin, wr_violin, ncol=3, top = "Average Value over Round in the 2000s")
 ```
 
 RBs in Round 1 always produce.
