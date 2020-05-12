@@ -480,6 +480,7 @@ Now let's join our prediction probabilities to the actual data, so we can look a
 
 test_df <- merge(test_df, predictions, by = "row.names", all.x = FALSE, all.y = FALSE)
 test_df$No.x <- NULL
+test_df$Row.names <- NULL
 
 kable(head(test_df))
 ```
@@ -525,6 +526,7 @@ Now let's join our prediction probabilities to the actual data like we did befor
 
 df_2020 <- merge(df_2020, predictions, by = "row.names", all.x = FALSE, all.y = FALSE)
 df_2020$No.x <- NULL
+df_2020$Row.names <- NULL
 
 kable(head(df_2020))
 ```
