@@ -24,9 +24,15 @@ library(knitr)
 
 We will scrape historical draft data from Pro-Football Reference from years 1970 till 2016. We chose to stop at 2016 since rookies usually sign 4 year deals, so the four year mark is typically when each team will finish evaulating each player they drafted, and make a decision on whether or not to resign the player. So, the jury is still out on players drafted after 2016.  We will filter out any selections after round 7, as since 1994, the NFL draft has only consisted of 7 rounds. 
 
-The result will be stored in the dataframe *master_df* with entities for each player.
+To scrape the data, we will use the *read_html()*, *html_node()*, and *html_table()* methods in the **rvest** package. More information on **rvest** is available here: https://blog.rstudio.com/2014/11/24/rvest-easy-web-scraping-with-r/
 
-Note: We will also do some process in this step as well, but we will go into more detail on that when we repeat the processing steps in another dataframe later in the walkthrough.
+First, we store the html file from our draft data website into the *draft_html* variable. From there, we search for the first occurence of the "table" element using *html_node()*, and then we parse the HTML data results into a dataframe using the *html_table()*. After parsing, we see that the column names are in the first row of the data, so we set the column names to be the first row of data with *names(df) <- as.character(unlist(df[1,]))*. Then we delete the first row of data (that still contains the column names) so all of the rows just contain player data.
+
+Since each years draft data is on a different website, we loop through all of the website, and after some more processing (see note), we use *rbind()* to add each dataframe vertically to our *master_df* dataframe.
+
+The result will be all of the 1970-2016 draft data stored in the dataframe *master_df* with entities for each player.
+
+*Note: We will also do some process in this step as well, but we will go into more detail on that when we repeat the processing steps in another dataframe later in the walkthrough.
     
 ```{r scrape_master}
 
@@ -124,7 +130,7 @@ roty_df <- draft_html %>%
 
 # Part 2: Data Processing and Preparation
 
-Load the NFL draft history data from *master_df*, containing the draft data from rounds 1-7 from the 1970-2016 NFL draft. We will only keep the observations that do not have any missing data entries. Also, we will convert the necessary columns to integers and factors (rather than chars). This way, we can use the columns values to group and to produce regression lines in our data visualization steps later.
+Load the NFL draft history data from *master_df*, containing the draft data from rounds 1-7 from the 1970-2016 NFL draft. The first line in this chunk will ensure that we will only keep the observations that do not have any missing data entries. Then, we will convert the necessary columns to integers and factors (rather than chars). This way, we can use the columns values to group and to produce regression lines in our data visualization steps later.
     
 ```{r process_master}
 
@@ -174,7 +180,14 @@ Our *master_df* dataframe now has entities for each player with the following va
     
     year: Year drafted
 
-Now let's process our 2020 Draft data. First, we will get rid of columns we don't care about, then remove blank rows, add year drafted to each observation, and convert the necessary columns to integers and factors, all like we did for the historical draft dataset. We will also filter this dataframe to only include quarterbacks, wide receivers, and running backs.
+Now let's process our 2020 Draft data. We will be using the *filter()* and *mutate()* methods found in the **dplyr** package in the **tidyverse** package. More info on **dplyr** can be found here: https://dplyr.tidyverse.org/
+
+First, we will get rid of columns we don't care about. 
+Next, we only keep rounds 1-7 using *filter()* with the conditional that **Rnd** variable must be less than 8. 
+There seem to be seperator rows between rounds that contain the column names again (probably for readability on the website), so we get rid of them by choosing to keep only rows where the **Player** variable does not equal "Player". 
+We then add year drafted to each observation using *mutate()*, which allows us to add variables to an existing dataframe, and again use *filter()* to only include quarterbacks, wide receivers, and running backs. 
+We noticed that some of the age data is missing for the players, so we fill in all of the missing age values with 22, since that is the most common age for a player to enter the pros.
+We convert the necessary columns to integers and factors, all like we did for the historical draft dataset. 
 
 ```{r process2020}
 # get rid of the columns we dont care about
@@ -184,7 +197,7 @@ df_2020 <- df_2020[,1:6]
 df_2020 <- df_2020 %>%
   filter(Rnd < 8)
   
-# get rid of blank rows
+# get rid of seperator rows
 df_2020 <-df_2020[!(df_2020$Player=="Player"),]
   
 # add year drafted to each observation, and filter out the defensive players.
@@ -229,7 +242,12 @@ test_df$Pos <- as.factor(test_df$Pos)
 kable(head(test_df))
 ```
 
-Now let's create a dataframe in which we can compare different positions that were drafted. First, we want to break up our data into 4 periods. Then for each period, we will take average career value of each position grouped by each round that the player was selected. We will make a new *pos_df* dataframe with these groupings.
+Now let's create a dataframe in which we can compare different positions that were drafted. First, we want to break up our data into 4 periods. We accomplish this with the *cut()* method on our **year** variable with parameter 'breaks' = 4. This will break up all of the data into 4 periods based on year, more information on cut is available here: https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/cut
+
+We will use *mutate()* again to add a variable **period** for which period this entry is in.
+Then for each period, we will take average career value of each position using *summarise()*, grouped by each round, period and position that the player was selected using *group_by()*. Both of these methods are also available in the **dplyr** package. 
+
+We will make a new *pos_df* dataframe with these groupings.
 
 ```{r positions}
 pos_df <- master_df %>%
@@ -240,7 +258,9 @@ pos_df <- master_df %>%
 kable(head(pos_df))
 ```
 
-Let's also add a dataframe *off_df* that is the same as *master_df*, but contains a variable **roty** that is Yes when the player that was drafted from 1970-2016 was Offensive Rookie of the Year, and No otherwise. We will also filter the dataframe to only contain offensive skill position players, like we did for the 2020 draft data.
+Let's also add a dataframe *off_df* that is the same as *master_df*, but contains a variable **roty** that is Yes when the player that was drafted from 1970-2016 was Offensive Rookie of the Year, and No otherwise. Again, since we are adding a new variable, we use *mutate()*, with a call to *ifelse()*. The condition in the ifelse will check if the entry's player name exists in the **Player** column of our rookie of the year table, if it exists it returns "Yes", and "No" otherwise. Lastly, we convert this new variable into a factor w/ 2 levels.
+
+We will also filter the dataframe to only contain offensive skill position players, like we did for the 2020 draft data.
 
 ```{r off_roty}
 off_df <- master_df %>%
@@ -260,7 +280,8 @@ Our first visualization will answer the following questions for us:
 Has average value for players selected in different rounds gone up over time?
 Have GMs gotten better at drafting in the first round, second round, etc...?
 
-To do this, we will plot the average value for all the players for each year since 1970, grouped by round.
+To do this, we will plot the average value for all the players for each year since 1970, grouped by round. We will create our plots using **ggplot2** which is available in the **tidyverse** package, more info can be found here: https://ggplot2.tidyverse.org/
+
 
 ```{r avg_val_rd1}
 
@@ -317,7 +338,7 @@ qb_av_pick <- master_df %>%
 qb_av_pick
 ```
 
-As we would expect the trend is that there is a decline in value until about pick 100, where the career value seems to be about the same from about pick 100-250. This would suggest that seelcting a QB at picks 100-150 would, statistically speaking, provide less bang for your buck, as you could likely get a player of the same quality with some of your later draft capital.
+As we would expect the trend is that there is a decline in value until about pick 100, where the career value seems to be about the same from about pick 100-250. So the data suggests that selecting a QB at picks 100-150 would provide less bang for your buck, as you could likely get a player of the same quality with some of your later draft capital.
 
 Our next plot will we a violin plot of the average value for quarterbakcs drafted in the 2000s in different rounds. This will give us a better idea of the distribution of the average value for the quarterback position.
 
@@ -441,6 +462,8 @@ We again see that round 2 is a value round for WRs as it appears to resemble the
 
 # Part 4: Machine Learning
 
+All of our machine learning goodness uses methods from the **caret** package, more info on this package can be found here: https://cran.r-project.org/web/packages/caret/vignettes/caret.html
+
 ## Predicting the Rookie Offensive MVP
 
 Now, right off the bat, we hope that the model will predict that Joe Burrow has a higher likelihood of winning the MVP. Not only because he's a stud, but because he's fresh off the Heisman, and the first overall pick QB that is going to a team in desperate need of good QB play. Vegas has him as the clear favorite to win, and the season is set up for him to take the title, so if our model is worth anything, it should at the very least have Joe Burrow as one of its top predictions for the award.
@@ -457,7 +480,7 @@ objControl <- trainControl(method='cv', number=3, returnResamp='none', summaryFu
 
 Now to actually train the model...
 
-First, we will set the predictor variables to **Tm**, **Pos**, and **Pick**, and the sole outcome variable as **roty**. Then we will use the *train()* method from the caret package to train the model using the *off_df* variable that contains all our historical draft data on all the offensive skill position players.
+First, we will set the predictor variables to **Tm**, **Pos**, and **Pick**, and the sole outcome variable as **roty**. Then we will use the *train()* method from the **caret** package to train the model using the *off_df* variable that contains all our historical draft data on all the offensive skill position players. We tell *train()* what predictor and outcome variables to use, as well as to use the gbm method with the resampling control that we set previously.
 
 ```{r train_model}
 
@@ -485,7 +508,7 @@ What is even more interesting is that the team the player was drafted to seemed 
 
 ## Testing against 2017-2019 data
 
-Let's test our model against the 2017, 2018, and 2019 datasets. To do this, we will use the *predict()* function in the caret package and feed it the test data. From there,  *predict()* will calculate probabilities that the model is sure about it choice that each observation from *test_df* will fall under the "Yes" and "No" outcome categories. So the **Yes** variable corresponds to the probability the model is sure about its choice that the player will become Rookie MVP, and **No** = probability the model is sure the player will not be the Rookie MVP.
+Let's test our model against the 2017, 2018, and 2019 datasets. To do this, we will use the *predict()* function in the **caret** package and feed it the test data. Since we set parameter 'type' to "prob",  *predict()* will calculate probabilities that the model is sure about it choice that each observation from *test_df* will fall under the "Yes" and "No" outcome categories. So the **Yes** variable corresponds to the probability the model is sure about its choice that the player will become Rookie MVP, and **No** = probability the model is sure the player will not be the Rookie MVP.
 
 ```{r eval_test}
 
@@ -504,7 +527,7 @@ test_df$Row.names <- NULL
 kable(head(test_df))
 ```
 
-Now let's get the top 10 players that the model is most certain will be the Offensive Rookie of the Year for 2017, 2018, and 2019.
+Now let's get the top 10 players that the model is most certain will be the Offensive Rookie of the Year for 2017, 2018, and 2019 respectively.
 
 ```{r top10_roty_test}
 
@@ -550,7 +573,7 @@ df_2020$Row.names <- NULL
 kable(head(df_2020))
 ```
 
-Now let's get the top 10 players that the model is most certain will be the Offensive Rookie of the Year
+Now let's get the top 10 players that the model is most certain will be the Offensive Rookie of the Year in 2020.
 
 ```{r top10_roty}
 
