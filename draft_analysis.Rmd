@@ -130,7 +130,7 @@ roty_df <- draft_html %>%
 
 # Part 2: Data Processing and Preparation
 
-Load the NFL draft history data from *master_df*, containing the draft data from rounds 1-7 from the 1970-2016 NFL draft. The first line in this chunk will ensure that we will only keep the observations that do not have any missing data entries. Then, we will convert the necessary columns to integers and factors (rather than chars). This way, we can use the columns values to group and to produce regression lines in our data visualization steps later.
+First, we will tidy the *master_df* dataframe. The first line in this chunk will ensure that we will only keep the observations that do not have any missing data entries. Then, we will convert the necessary columns to integers and factors (rather than chars). This way, we can use the columns values to group and to produce regression lines in our data visualization steps later.
     
 ```{r process_master}
 
@@ -180,7 +180,7 @@ Our *master_df* dataframe now has entities for each player with the following va
     
     year: Year drafted
 
-Now let's process our 2020 Draft data. We will be using the *filter()* and *mutate()* methods found in the **dplyr** package in the **tidyverse** package. More info on **dplyr** can be found here: https://dplyr.tidyverse.org/
+Now let's process/tidy our 2020 Draft data. We will be using the *filter()* and *mutate()* methods found in the **dplyr** package in the **tidyverse** package. More info on **dplyr** can be found here: https://dplyr.tidyverse.org/
 
 First, we will get rid of columns we don't care about. 
 Next, we only keep rounds 1-7 using *filter()* with the conditional that **Rnd** variable must be less than 8. 
@@ -245,7 +245,7 @@ kable(head(test_df))
 Now let's create a dataframe in which we can compare different positions that were drafted. First, we want to break up our data into 4 periods. We accomplish this with the *cut()* method on our **year** variable with parameter 'breaks' = 4. This will break up all of the data into 4 periods based on year, more information on cut is available here: https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/cut
 
 We will use *mutate()* again to add a variable **period** for which period this entry is in.
-Then for each period, we will take average career value of each position using *summarise()*, grouped by each round, period and position that the player was selected using *group_by()*. Both of these methods are also available in the **dplyr** package. 
+Then for each grouping of period, round, and period using *group_by()*, we will create an average career value variable  **Avg_AV** of each grouping using *summarise()*. Both of these methods are also available in the **dplyr** package. 
 
 We will make a new *pos_df* dataframe with these groupings.
 
@@ -282,6 +282,9 @@ Have GMs gotten better at drafting in the first round, second round, etc...?
 
 To do this, we will plot the average value for all the players for each year since 1970, grouped by round. We will create our plots using **ggplot2** which is available in the **tidyverse** package, more info can be found here: https://ggplot2.tidyverse.org/
 
+Here, we map the x-variable to **year** and the y-variable to **Avg_AV**, and using *geom_point()* tells **ggplot2** to create a scatter plot of the data. We them use *geom_smooth(method=lm)* to create a regression line, where lm stands for linear model. More info can be found here: https://ggplot2.tidyverse.org/reference/geom_smooth.html
+
+We group by round to create 7 different regression lines in our plot. 
 
 ```{r avg_val_rd1}
 
@@ -305,6 +308,10 @@ Lets analyze the average values of different positions grouped by round and time
 
 So, lets create a bar graph. For each time period, we will graph the average value of a quarterback selected in each round.
 
+To create a bar graph, we use *geom_bar*, where stat="identity" allows us to have the height of the bars represent values in the data, which are mapped to **Avg_AV** in this case. The position="dodge" puts the bars for each round side by side.
+
+More info on *geom_bar()*: https://ggplot2.tidyverse.org/reference/geom_bar.html
+
 ```{r qb}
 qb_bar <- pos_df %>%
   filter(Pos == "QB") %>%
@@ -320,9 +327,11 @@ In the past 20 years (2000-2020), it is much more likely to hit on a QB in the f
 
 Before then, from 1990-2000, we see that the 6th round was a  value pick for QB, although Tom Brady might be the outlier that is skewing those numbers. But we also see that there was far more value in the second round QB selection from 1980-2000 than in the past 20 years.
 
-Now let's focus our attention on the past 20 years and graph some visualizations of that data.
+Now let's focus our attention on QBs of the past 20 years and graph some visualizations of that data. To do this, we will use *filter()* on **Pos** and **year**.
 
 Our first graph for the 2000s will be the average value of a quarterback on the y-axis, and the pick number in which they were selected on the x-axis.
+
+In this case, in addition to the linear model regression line in green, we will also add a locally estimated scatterplot smoothing (LOESS) regression line using *geom_smooth(method='loess')*.
 
 ```{r qb2}
 
@@ -342,6 +351,8 @@ As we would expect the trend is that there is a decline in value until about pic
 
 Our next plot will we a violin plot of the average value for quarterbakcs drafted in the 2000s in different rounds. This will give us a better idea of the distribution of the average value for the quarterback position.
 
+We use *geom_violion()* to create the violin plots, more info can be found here: https://ggplot2.tidyverse.org/reference/geom_violin.html
+
 ```{r qb3}
 
 qb_violin <- master_df %>%
@@ -349,9 +360,7 @@ qb_violin <- master_df %>%
   filter(Pos == "QB") %>%
   ggplot(mapping=aes(x=factor(Rnd), y=CarAV)) +
     geom_violin()  +
-    labs(x = "Rnd", y = "Career Value", title = "Average Value over Round for QBs Drafted in the 2000s") + 
-    geom_smooth(method=lm)
-
+    labs(x = "Rnd", y = "Career Value", title = "Average Value over Round for QBs Drafted in the 2000s")
 qb_violin
 ```
 
@@ -361,7 +370,7 @@ However, the distributions reaffirm what we have seen before in our Round 1 QBs.
 
 ## Analyzing the WR and RB
 
-Next we will provide the same graphs to provide similar insight into the RB and WR selections of the draft. We will use *grid.arrange* to show the graphs side by side in three columns.
+Next we will provide the same graphs to provide similar insight into the RB and WR selections of the draft. We will use *grid.arrange* to show the graphs for WRs, RBs, and QBs side by side in three columns.
 
 It is interesting to note that the general trend has been to select RBs later in the draft, as RBs have always been considered as more expendable than a QB, and there seems to be a notion that you can always get a quality back in the later rounds, and that using first round capital on a RB is a poor management decision.
 
@@ -391,7 +400,9 @@ qb_bar <- pos_df %>%
 grid.arrange(qb_bar, rb_bar, wr_bar, ncol=3, top = "Average Value in Different Rounds in the 2000s")
 ```
 
-Not as drastic of a difference in rounds 1 and 2 in the WR group. The RB average value in the 2000s seems to resemble the QB position.
+Insights:
+Not as drastic of a difference in rounds 1 and 2 in the WR group. 
+The RB average value in the 2000s seems to resemble the QB position.
 
 ```{r rb_wr2}
 
@@ -424,8 +435,8 @@ grid.arrange(qb_av_pick, rb_av_pick, wr_av_pick, ncol=3, top = "Average Value Ov
 
 ```
 
+Insights:
 Much less steep of a drop off between round 1 to 2 in the WR group.
-
 Again we see a trend that by pick 100 the value seems to hit a plateue.
 
 ```{r rb_wr3}
@@ -435,30 +446,28 @@ qb_violin <- master_df %>%
   filter(Pos == "QB") %>%
   ggplot(mapping=aes(x=factor(Rnd), y=CarAV)) +
     geom_violin()  +
-    labs(x = "Rnd", y = "Career Value", title = "QB Average Value") + 
-    geom_smooth(method=lm)
+    labs(x = "Rnd", y = "Career Value", title = "QB Average Value")
 
 rb_violin <- master_df %>%
   filter(year >= 2000) %>%
   filter(Pos == "RB") %>%
   ggplot(mapping=aes(x=factor(Rnd), y=CarAV)) +
     geom_violin()  +
-    labs(x = "Rnd", y = "Career Value", title = "RB Average Value") + 
-    geom_smooth(method=lm)
+    labs(x = "Rnd", y = "Career Value", title = "RB Average Value")
 
 wr_violin <- master_df %>%
   filter(year >= 2000) %>%
   filter(Pos == "WR") %>%
   ggplot(mapping=aes(x=factor(Rnd), y=CarAV)) +
     geom_violin()  +
-    labs(x = "Rnd", y = "Career Value", title = "WR Average Value") + 
-    geom_smooth(method=lm)
+    labs(x = "Rnd", y = "Career Value", title = "WR Average Value") 
 
 grid.arrange(qb_violin, rb_violin, wr_violin, ncol=3, top = "Average Value over Round in the 2000s")
 ```
 
-RBs in Round 1 always produce.
-We again see that round 2 is a value round for WRs as it appears to resemble the type of value you get out of round 1.
+Insights:
+RBs in Round 1 always produce, and RBs selected in later rounds have a much larger spread than quarterbacks, suggesting it is easier to get a running back of decent value in later rounds than it is to get a QB.
+We again see that round 2 is a value round for WRs as it appears to resemble the type of value you get out of round 1. Rounds 1-4 have generally similar range in the spread of values, so there seems to be great talent available outside of rounds 1 and 2 for wide receivers. 
 
 # Part 4: Machine Learning
 
@@ -468,19 +477,18 @@ All of our machine learning goodness uses methods from the **caret** package, mo
 
 Now, right off the bat, we hope that the model will predict that Joe Burrow has a higher likelihood of winning the MVP. Not only because he's a stud, but because he's fresh off the Heisman, and the first overall pick QB that is going to a team in desperate need of good QB play. Vegas has him as the clear favorite to win, and the season is set up for him to take the title, so if our model is worth anything, it should at the very least have Joe Burrow as one of its top predictions for the award.
 
-First, lets control the resampling of our data. In this case, we’re going to cross-validate the data 3 times, therefore training the model 3 times on different portions of the data before settling on the best tuning parameters. For gbm, the tuning parameters are trees, shrinkage, and interaction depth.
+First, lets control the resampling of our data. In this case, we’re going to cross-validate the data 3 times, so we will train the model 3 times on different portions of the data before deciding on the best tuning parameters. For the gbm method that we will be using, the tuning parameters are trees, shrinkage, and interaction depth.
 
 ```{r ml_control}
 
 objControl <- trainControl(method='cv', number=3, returnResamp='none', summaryFunction = twoClassSummary, classProbs = TRUE)
-
 ```
 
 ## Creating our Model
 
 Now to actually train the model...
 
-First, we will set the predictor variables to **Tm**, **Pos**, and **Pick**, and the sole outcome variable as **roty**. Then we will use the *train()* method from the **caret** package to train the model using the *off_df* variable that contains all our historical draft data on all the offensive skill position players. We tell *train()* what predictor and outcome variables to use, as well as to use the gbm method with the resampling control that we set previously.
+First, we will set the predictor variables to **Tm**, **Pos**, and **Pick**, and the sole outcome variable as **roty**. Then we will use the *train()* method from the **caret** package to train the model using the *off_df* variable that contains all our historical draft data on all the offensive skill position players. We tell *train()* what predictor and outcome variables to use, as well as to use the gbm (gradient boosting algorithm) with the resampling control that we set previously.
 
 ```{r train_model}
 
@@ -527,7 +535,9 @@ test_df$Row.names <- NULL
 kable(head(test_df))
 ```
 
-Now let's get the top 10 players that the model is most certain will be the Offensive Rookie of the Year for 2017, 2018, and 2019 respectively.
+So we see that the model is 85% percent sure that Mitchell Trubisky will not win Rookie Offensive MVP, and ~15% sure that Trubisky will win the award.
+
+Now let's get the top 10 players that the model is most certain will be the Offensive Rookie of the Year for 2017, 2018, and 2019 respectively, using the *top_n()* function in the **dplyr** package (https://dplyr.tidyverse.org/reference/top_n.html)
 
 ```{r top10_roty_test}
 
@@ -583,6 +593,8 @@ top10_roty <- df_2020 %>%
 kable(top10_roty)
 ```
 
-**Joe Burrow is our model's top prediction to win the MVP!!!** We also see that Cam Akers, Tua, Henry Ruggs III, Jerry Jeudy, CeDee Lamb, and Justin Jefferson also appear in the top 10. All of these players are among those that have the highest odds to win the the Offensive MVP according to OddsShark.
+**Joe Burrow is our model's top prediction to win the MVP!!!** The model is 21% sure that Burrow will win the Rookie Offensive MVP, and 79% sure that he will not.
+
+We also see that Cam Akers, Tua, Henry Ruggs III, Jerry Jeudy, CeDee Lamb, and Justin Jefferson also appear in the top 10. All of these players are among those that have the highest odds to win the the Offensive MVP according to OddsShark.
 
 Again, it's important to highlight that we trained this model JUST based on the pick number, team, and position for each player, whereas the Vegas odds have most certainly taken into account the player's performance in college as well.
